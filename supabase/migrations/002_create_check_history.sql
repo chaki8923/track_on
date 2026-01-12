@@ -18,6 +18,10 @@ CREATE TABLE IF NOT EXISTS site_check_history (
   ai_summary TEXT,
   ai_intent TEXT,
   
+  -- スクリーンショット（Cloudflare R2のURL）
+  screenshot_url TEXT,
+  screenshot_before_url TEXT,
+  
   -- エラー情報
   has_error BOOLEAN DEFAULT false,
   error_message TEXT,

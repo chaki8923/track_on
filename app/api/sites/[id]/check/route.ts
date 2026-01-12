@@ -4,6 +4,7 @@ import { scrapeSite } from '@/lib/scraper';
 import { compareContent, calculateImportance } from '@/lib/differ';
 import { analyzeDiff } from '@/lib/gemini';
 import { notifyChange } from '@/lib/notifications';
+import { uploadScreenshot, isR2Configured } from '@/lib/r2';
 
 /**
  * 手動チェックエンドポイント（テスト用）
@@ -37,8 +38,11 @@ export async function POST(
   try {
     const startTime = Date.now();
     
+    // R2が設定されている場合はスクリーンショットを撮影
+    const takeScreenshot = isR2Configured();
+    
     // スクレイピング実行
-    const scrapedContent = await scrapeSite(site.url);
+    const scrapedContent = await scrapeSite(site.url, { takeScreenshot });
 
     // 前回のスナップショットを取得
     const { data: lastSnapshot } = await supabase
@@ -63,11 +67,28 @@ export async function POST(
       throw new Error(`スナップショット保存エラー: ${snapshotError.message}`);
     }
 
+    // スクリーンショットをR2にアップロード
+    let screenshotUrl: string | null = null;
+    if (scrapedContent.screenshot && takeScreenshot) {
+      try {
+        screenshotUrl = await uploadScreenshot(
+          scrapedContent.screenshot,
+          site.id,
+          Date.now()
+        );
+        console.log(`スクリーンショットをアップロード: ${screenshotUrl}`);
+      } catch (uploadError) {
+        console.error('スクリーンショットのアップロードに失敗:', uploadError);
+        // アップロード失敗してもチェックは続行
+      }
+    }
+
     // 差分チェック
     let checkHistoryData: any = {
       site_id: site.id,
       has_changes: false,
       check_duration_ms: 0,
+      screenshot_url: screenshotUrl,
     };
 
     if (lastSnapshot) {

@@ -22,6 +22,13 @@ STRIPE_WEBHOOK_SECRET=
 STRIPE_PRO_PRICE_ID=
 STRIPE_BUSINESS_PRICE_ID=
 
+# Cloudflare R2（オプション - スクリーンショット保存を使う場合）
+R2_ACCOUNT_ID=
+R2_ACCESS_KEY_ID=
+R2_SECRET_ACCESS_KEY=
+R2_BUCKET_NAME=
+R2_PUBLIC_URL=
+
 # App URL（必須）
 NEXT_PUBLIC_APP_URL=
 
@@ -65,9 +72,11 @@ CRON_SECRET=
 4. **データベースのセットアップ**
    - 左サイドバー → 🗄️ SQL Editor
    - "New query" をクリック
-   - `supabase/schema.sql` の内容を全てコピー&ペースト
-   - "Run" をクリック（緑のチェックマークが表示されればOK）
-   - 同様に `supabase/migrations/001_add_notification_settings.sql` も実行
+   - 以下のファイルを順番に実行:
+     1. `supabase/schema.sql` の内容を全てコピー&ペースト → "Run"
+     2. `supabase/migrations/001_add_notification_settings.sql` → "Run"
+     3. `supabase/migrations/002_create_check_history.sql` → "Run"
+   - 各ファイルで緑のチェックマークが表示されればOK
 
 5. **認証設定（オプション）**
    - 左サイドバー → 🔐 Authentication → Providers
@@ -209,7 +218,111 @@ CRON_SECRET=
 
 ---
 
-## 4️⃣ App URL（アプリケーションのURL）
+## 4️⃣ Cloudflare R2（スクリーンショット保存）
+
+### 📍 取得手順
+
+⚠️ **注意**: この設定は**オプション**です。R2を設定しない場合、スクリーンショットは保存されませんが、差分チェック機能は正常に動作します。
+
+#### A. アカウント作成 & バケット作成
+
+1. **Cloudflareアカウント作成**
+   - https://dash.cloudflare.com/sign-up にアクセス
+   - メールアドレスで登録
+
+2. **R2セクションに移動**
+   - 左サイドバー → **R2**
+   - "Purchase R2" をクリック（無料枠内なら料金は発生しない）
+
+3. **バケット作成**
+   - "Create bucket" をクリック
+   - バケット名: `competitive-watcher-screenshots`（任意）
+   - リージョン: **Automatic**（推奨）
+   - "Create bucket" をクリック
+
+   ```env
+   R2_BUCKET_NAME=competitive-watcher-screenshots
+   ```
+
+#### B. API トークンの作成
+
+1. **R2 API Tokensに移動**
+   - R2 → **Manage R2 API Tokens**
+   - "Create API Token" をクリック
+
+2. **権限設定**
+   - Token name: `competitive-watcher`
+   - Permissions: **Object Read & Write**
+   - TTL: **Forever**（または任意の期限）
+   - Specific bucket: 作成したバケットを選択（推奨）
+   - "Create API Token" をクリック
+
+3. **トークン情報をコピー**
+   
+   以下の値が表示されるので、すべてコピーして保存:
+
+   ```env
+   R2_ACCESS_KEY_ID=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+   R2_SECRET_ACCESS_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+   ```
+
+4. **Account IDを取得**
+   - R2のOverviewページで確認
+   - または右サイドバーの "Account ID" をコピー
+
+   ```env
+   R2_ACCOUNT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+   ```
+
+#### C. 公開URLの設定
+
+**方法A: R2.dev サブドメイン（簡単・無料）**
+
+1. バケット設定 → **Settings**
+2. **Public Access** → "Allow Access" をクリック
+3. 確認ダイアログで "Allow" をクリック
+4. 公開URLが表示される: `https://<bucket>.<account>.r2.dev`
+
+   ```env
+   R2_PUBLIC_URL=https://competitive-watcher-screenshots.xxxxxx.r2.dev
+   ```
+
+**方法B: カスタムドメイン（独自ドメインがある場合）**
+
+1. バケット設定 → **Custom Domains**
+2. "Connect Domain" をクリック
+3. あなたのドメインを入力（例: `screenshots.competitive-watcher.com`）
+4. DNS設定を完了
+
+   ```env
+   R2_PUBLIC_URL=https://screenshots.competitive-watcher.com
+   ```
+
+### 💰 料金
+
+- **ストレージ**: $0.015/GB/月
+  - 無料枠: 10GB/月
+- **転送量**: **完全無料**（これがR2の最大の利点！）
+- **APIリクエスト**: 
+  - Class A (書き込み): $4.50/100万リクエスト
+  - Class B (読み込み): $0.36/100万リクエスト
+
+### 📊 コスト試算例
+
+- 100サイト × 1日1回チェック × 30日 = 3,000枚/月
+- 1枚あたり 200KB として 600MB/月
+- **月額コスト**: 約 $0.01（約1円）
+
+### 💡 ヒント
+
+- R2を設定しない場合、スクリーンショットなしで動作します
+- 後から追加することも可能
+- 無料枠（10GB）内であれば完全無料
+- 画像の転送料が無料なのでユーザーが増えても安心
+
+---
+
+## 5️⃣ App URL（アプリケーションのURL）
 
 ### 📍 設定方法
 
@@ -237,7 +350,7 @@ NEXT_PUBLIC_APP_URL=https://competitivewatcher.com
 
 ---
 
-## 5️⃣ Cron認証（オプション）
+## 6️⃣ Cron認証（オプション）
 
 ### 📍 設定方法
 
@@ -306,6 +419,7 @@ Vercelの場合、環境変数は以下で設定:
 - [ ] `SUPABASE_SERVICE_ROLE_KEY` が設定されている
 - [ ] Supabaseでスキーマ（`schema.sql`）を実行した
 - [ ] Supabaseでマイグレーション（`001_add_notification_settings.sql`）を実行した
+- [ ] Supabaseでマイグレーション（`002_create_check_history.sql`）を実行した
 - [ ] `GEMINI_API_KEY` が設定されている
 - [ ] `NEXT_PUBLIC_APP_URL` が設定されている
 
@@ -316,6 +430,16 @@ Vercelの場合、環境変数は以下で設定:
 - [ ] `STRIPE_PRO_PRICE_ID` が設定されている
 - [ ] `STRIPE_BUSINESS_PRICE_ID` が設定されている
 - [ ] Stripeで2つのプラン（Pro, Business）を作成した
+
+### Cloudflare R2（スクリーンショット機能を使う場合）
+
+- [ ] `R2_ACCOUNT_ID` が設定されている
+- [ ] `R2_ACCESS_KEY_ID` が設定されている
+- [ ] `R2_SECRET_ACCESS_KEY` が設定されている
+- [ ] `R2_BUCKET_NAME` が設定されている
+- [ ] `R2_PUBLIC_URL` が設定されている
+- [ ] R2でバケットを作成した
+- [ ] R2バケットの公開アクセスを有効化した
 
 ### 本番環境のみ
 

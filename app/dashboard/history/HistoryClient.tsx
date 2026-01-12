@@ -23,6 +23,8 @@ type HistoryItem = {
   has_error: boolean;
   error_message?: string;
   check_duration_ms?: number;
+  screenshot_url?: string;
+  screenshot_before_url?: string;
   monitored_sites: {
     id: string;
     name: string;
@@ -40,6 +42,7 @@ export default function HistoryClient({ user, sites, history }: Props) {
   const router = useRouter();
   const [filterSite, setFilterSite] = useState<string>("all");
   const [filterType, setFilterType] = useState<string>("all"); // all, changes, no-changes, errors
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const filteredHistory = history.filter((item) => {
     if (filterSite !== "all" && item.site_id !== filterSite) return false;
@@ -245,11 +248,65 @@ export default function HistoryClient({ user, sites, history }: Props) {
                     )}
                   </div>
                 )}
+
+                {/* スクリーンショット */}
+                {item.screenshot_url && (
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-3">
+                      📸 スクリーンショット
+                    </h4>
+                    <div className="flex gap-4 overflow-x-auto">
+                      <div className="flex-shrink-0">
+                        <p className="text-xs text-gray-600 mb-2">チェック時</p>
+                        <img
+                          src={item.screenshot_url}
+                          alt="チェック時のスクリーンショット"
+                          className="w-64 h-auto border border-gray-300 rounded-lg cursor-pointer hover:opacity-80 transition"
+                          onClick={() => setSelectedImage(item.screenshot_url!)}
+                        />
+                      </div>
+                      {item.screenshot_before_url && (
+                        <div className="flex-shrink-0">
+                          <p className="text-xs text-gray-600 mb-2">変更前</p>
+                          <img
+                            src={item.screenshot_before_url}
+                            alt="変更前のスクリーンショット"
+                            className="w-64 h-auto border border-gray-300 rounded-lg cursor-pointer hover:opacity-80 transition"
+                            onClick={() => setSelectedImage(item.screenshot_before_url!)}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             ))
           )}
         </div>
       </div>
+
+      {/* 画像拡大モーダル */}
+      {selectedImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4"
+          onClick={() => setSelectedImage(null)}
+        >
+          <div className="relative max-w-7xl max-h-full">
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="absolute top-4 right-4 bg-white text-gray-900 rounded-full w-10 h-10 flex items-center justify-center hover:bg-gray-100 transition z-10"
+            >
+              ✕
+            </button>
+            <img
+              src={selectedImage}
+              alt="スクリーンショット拡大"
+              className="max-w-full max-h-[90vh] rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
