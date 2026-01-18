@@ -13,6 +13,13 @@ export default async function ComparePage() {
     redirect("/login");
   }
 
+  // ユーザープロフィールを取得
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("plan")
+    .eq("id", session.user.id)
+    .single();
+
   // ユーザーのサイト一覧を取得
   const { data: sites } = await supabase
     .from("monitored_sites")
@@ -24,6 +31,7 @@ export default async function ComparePage() {
     <CompareClient
       user={session.user}
       sites={sites || []}
+      plan={profile?.plan || "free"}
     />
   );
 }

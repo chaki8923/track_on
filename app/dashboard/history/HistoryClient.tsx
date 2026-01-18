@@ -38,15 +38,18 @@ type Props = {
   user: any;
   sites: Site[];
   history: HistoryItem[];
+  plan: string;
 };
 
-export default function HistoryClient({ user, sites, history }: Props) {
+export default function HistoryClient({ user, sites, history, plan }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [filterSite, setFilterSite] = useState<string>("all");
   const [filterType, setFilterType] = useState<string>("all"); // all, changes, no-changes, errors
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // URLパラメータからsite_idを取得して初期フィルタを設定
   useEffect(() => {
@@ -95,6 +98,46 @@ export default function HistoryClient({ user, sites, history }: Props) {
     router.refresh();
   };
 
+  const handleDelete = async () => {
+    if (!deleteTargetId) return;
+
+    console.log('🗑️ クライアント: 削除開始 -', deleteTargetId);
+    setIsDeleting(true);
+    
+    try {
+      console.log('🗑️ クライアント: APIリクエスト送信中...');
+      const response = await fetch(`/api/history/${deleteTargetId}/delete`, {
+        method: 'DELETE',
+      });
+
+      console.log('🗑️ クライアント: APIレスポンス受信 -', response.status, response.ok);
+
+      if (response.ok) {
+        console.log('✅ クライアント: 削除成功 - ページリフレッシュ開始');
+        // モーダルを閉じる
+        setDeleteTargetId(null);
+        setIsDeleting(false);
+        // ページをリフレッシュして最新の履歴を表示
+        router.refresh();
+        // 少し遅延させてから完全リロード
+        setTimeout(() => {
+          window.location.reload();
+        }, 100);
+      } else {
+        const data = await response.json();
+        console.error('❌ クライアント: 削除失敗 -', data);
+        alert(`削除に失敗しました: ${data.error || '不明なエラー'}`);
+        setIsDeleting(false);
+        setDeleteTargetId(null);
+      }
+    } catch (error: any) {
+      console.error('❌ クライアント: 削除エラー -', error);
+      alert(`削除に失敗しました: ${error.message || '不明なエラー'}`);
+      setIsDeleting(false);
+      setDeleteTargetId(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* ヘッダー */}
@@ -106,9 +149,14 @@ export default function HistoryClient({ user, sites, history }: Props) {
             </Link>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-600">{user.email}</span>
-              <Link href="/dashboard/compare" className="text-sm text-gray-600 hover:text-gray-900 transition flex items-center space-x-1">
+              <Link href="/dashboard/compare" className="text-sm text-gray-600 hover:text-gray-900 transition flex items-center space-x-1 relative">
                 <MdCompareArrows className="text-lg" />
                 <span>スクショ比較</span>
+                {plan === "free" && (
+                  <span className="ml-1 px-1.5 py-0.5 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs font-bold rounded">
+                    PRO
+                  </span>
+                )}
               </Link>
               <Link href="/dashboard/settings" className="text-sm text-gray-600 hover:text-gray-900">
                 設定
@@ -211,34 +259,45 @@ export default function HistoryClient({ user, sites, history }: Props) {
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <Link
-                        href={`/dashboard/sites/${item.site_id}`}
-                        className="text-lg font-semibold text-gray-900 hover:text-primary-600"
-                      >
-                        {item.monitored_sites.name}
-                      </Link>
-                      {item.has_error ? (
-                        <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
-                          ❌ エラー
-                        </span>
-                      ) : item.has_changes ? (
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium border ${
-                            item.importance
-                              ? importanceConfig[item.importance].color
-                              : "bg-gray-100 text-gray-700"
-                          }`}
+                    <div className="flex items-center space-x-3 mb-2 justify-between">
+                      <div className="flex items-center space-x-3">
+                        <Link
+                          href={`/dashboard/sites/${item.site_id}`}
+                          className="text-lg font-semibold text-gray-900 hover:text-primary-600"
                         >
-                          {item.importance
-                            ? `${importanceConfig[item.importance].icon} 変更あり（${importanceConfig[item.importance].label}）`
-                            : "変更あり"}
-                        </span>
-                      ) : (
-                        <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
-                          ✅ 変更なし
-                        </span>
-                      )}
+                          {item.monitored_sites.name}
+                        </Link>
+                        {item.has_error ? (
+                          <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
+                            ❌ エラー
+                          </span>
+                        ) : item.has_changes ? (
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-medium border ${
+                              item.importance
+                                ? importanceConfig[item.importance].color
+                                : "bg-gray-100 text-gray-700"
+                            }`}
+                          >
+                            {item.importance
+                              ? `${importanceConfig[item.importance].icon} 変更あり（${importanceConfig[item.importance].label}）`
+                              : "変更あり"}
+                          </span>
+                        ) : (
+                          <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
+                            ✅ 変更なし
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => setDeleteTargetId(item.id)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                        title="削除"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
                     </div>
                     <div className="text-sm text-gray-600 space-x-4">
                       <span>
@@ -443,6 +502,82 @@ export default function HistoryClient({ user, sites, history }: Props) {
               <p className="text-white text-sm opacity-75">
                 スクロールして全体を確認できます
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 削除確認モーダル */}
+      {deleteTargetId && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-slideUp">
+            {/* ヘッダー */}
+            <div className="bg-gradient-to-r from-red-500 to-red-600 p-6 text-white">
+              <div className="flex items-center space-x-3">
+                <div className="bg-white bg-opacity-20 rounded-full p-3">
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold">履歴を削除</h3>
+                  <p className="text-red-100 text-sm mt-1">この操作は取り消せません</p>
+                </div>
+              </div>
+            </div>
+
+            {/* コンテンツ */}
+            <div className="p-6">
+              <p className="text-gray-700 mb-4">
+                このチェック履歴を完全に削除します。
+              </p>
+              <ul className="space-y-2 text-sm text-gray-600 bg-gray-50 rounded-lg p-4 mb-6">
+                <li className="flex items-start">
+                  <svg className="w-5 h-5 mr-2 text-red-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                  <span>チェック結果とAI分析が削除されます</span>
+                </li>
+                <li className="flex items-start">
+                  <svg className="w-5 h-5 mr-2 text-red-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                  <span>スクリーンショットが削除されます</span>
+                </li>
+              </ul>
+
+              {/* ボタン */}
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setDeleteTargetId(null)}
+                  disabled={isDeleting}
+                  className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all font-medium disabled:opacity-50"
+                >
+                  キャンセル
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all font-medium shadow-lg disabled:opacity-50 flex items-center justify-center"
+                >
+                  {isDeleting ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      削除中...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      削除する
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

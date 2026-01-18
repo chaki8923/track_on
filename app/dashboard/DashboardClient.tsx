@@ -212,10 +212,15 @@ export default function DashboardClient({ user, profile, sites }: Props) {
 
               <a
                 href="/dashboard/compare"
-                className="text-sm text-gray-600 hover:text-gray-900 transition flex items-center space-x-1"
+                className="text-sm text-gray-600 hover:text-gray-900 transition flex items-center space-x-1 relative"
               >
                 <MdCompareArrows className="text-lg" />
                 <span>スクショ比較</span>
+                {currentPlan === "free" && (
+                  <span className="ml-1 px-1.5 py-0.5 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs font-bold rounded">
+                    PRO
+                  </span>
+                )}
               </a>
               <a
                 href="/dashboard/history"

@@ -38,9 +38,10 @@ type Snapshot = {
 type Props = {
   user: User;
   sites: Site[];
+  plan: string;
 };
 
-export default function CompareClient({ user, sites }: Props) {
+export default function CompareClient({ user, sites, plan }: Props) {
   const [selectedSite, setSelectedSite] = useState<string>("");
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [loading, setLoading] = useState(false);
@@ -146,8 +147,153 @@ export default function CompareClient({ user, sites }: Props) {
       </header>
 
       <div className="container mx-auto px-4 py-8">
-        {/* コントロールパネル */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8 border border-gray-200">
+        {/* 無料プラン制限UI */}
+        {plan === "free" ? (
+          <div className="max-w-4xl mx-auto">
+            {/* プレミアム機能バッジ */}
+            <div className="text-center mb-6">
+              <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-bold bg-gradient-to-r from-yellow-400 to-orange-500 text-white shadow-lg">
+                <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                </svg>
+                PRO機能
+              </span>
+            </div>
+
+            {/* メインコンテンツ */}
+            <div className="bg-gradient-to-br from-white to-blue-50 rounded-3xl shadow-2xl overflow-hidden border-2 border-primary-200">
+              {/* ヘッダー */}
+              <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white p-8 text-center">
+                <MdCompareArrows className="text-6xl mx-auto mb-4 animate-pulse" />
+                <h2 className="text-3xl font-bold mb-2">スクリーンショット比較機能</h2>
+                <p className="text-primary-100 text-lg">競合サイトの変化を視覚的に捉える、プロフェッショナル向けツール</p>
+              </div>
+
+              {/* 機能説明 */}
+              <div className="p-8">
+                <div className="grid md:grid-cols-2 gap-6 mb-8">
+                  <div className="bg-white rounded-xl p-6 shadow-md border border-gray-200">
+                    <div className="flex items-center mb-4">
+                      <div className="bg-primary-100 rounded-full p-3 mr-4">
+                        <MdViewColumn className="text-2xl text-primary-600" />
+                      </div>
+                      <h3 className="text-xl font-bold text-gray-900">並べて比較</h3>
+                    </div>
+                    <p className="text-gray-600">
+                      2つのスクリーンショットを並べて表示。同期スクロールで細かい変更も見逃しません。
+                    </p>
+                  </div>
+
+                  <div className="bg-white rounded-xl p-6 shadow-md border border-gray-200">
+                    <div className="flex items-center mb-4">
+                      <div className="bg-primary-100 rounded-full p-3 mr-4">
+                        <MdCompare className="text-2xl text-primary-600" />
+                      </div>
+                      <h3 className="text-xl font-bold text-gray-900">スライダー表示</h3>
+                    </div>
+                    <p className="text-gray-600">
+                      スライダーを動かして、変更前後を直感的に比較。デザイン変更を一目で確認できます。
+                    </p>
+                  </div>
+
+                  <div className="bg-white rounded-xl p-6 shadow-md border border-gray-200">
+                    <div className="flex items-center mb-4">
+                      <div className="bg-primary-100 rounded-full p-3 mr-4">
+                        <MdCalendarToday className="text-2xl text-primary-600" />
+                      </div>
+                      <h3 className="text-xl font-bold text-gray-900">任意の日付比較</h3>
+                    </div>
+                    <p className="text-gray-600">
+                      過去のあらゆる時点のスクショを比較可能。長期的な変化の追跡に最適です。
+                    </p>
+                  </div>
+
+                  <div className="bg-white rounded-xl p-6 shadow-md border border-gray-200">
+                    <div className="flex items-center mb-4">
+                      <div className="bg-primary-100 rounded-full p-3 mr-4">
+                        <HiCamera className="text-2xl text-primary-600" />
+                      </div>
+                      <h3 className="text-xl font-bold text-gray-900">拡大表示</h3>
+                    </div>
+                    <p className="text-gray-600">
+                      クリックで全画面拡大。微細なデザイン変更やテキスト修正も見逃しません。
+                    </p>
+                  </div>
+                </div>
+
+                {/* プラン比較 */}
+                <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-6 mb-8 border border-gray-300">
+                  <h3 className="text-xl font-bold text-gray-900 mb-4 text-center">プラン比較</h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="bg-white rounded-lg p-4 border-2 border-gray-300">
+                      <div className="text-center mb-3">
+                        <h4 className="text-lg font-bold text-gray-700">Free</h4>
+                        <p className="text-sm text-gray-500">現在のプラン</p>
+                      </div>
+                      <ul className="space-y-2 text-sm">
+                        <li className="flex items-center text-gray-600">
+                          <span className="mr-2">✅</span>
+                          監視サイト: 1件
+                        </li>
+                        <li className="flex items-center text-gray-600">
+                          <span className="mr-2">✅</span>
+                          日次チェック: 5回/日
+                        </li>
+                        <li className="flex items-center text-gray-400">
+                          <span className="mr-2">❌</span>
+                          <span className="line-through">スクショ比較</span>
+                        </li>
+                      </ul>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-primary-50 to-primary-100 rounded-lg p-4 border-2 border-primary-400 relative">
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary-600 text-white px-3 py-1 rounded-full text-xs font-bold">
+                        おすすめ
+                      </div>
+                      <div className="text-center mb-3">
+                        <h4 className="text-lg font-bold text-primary-900">Pro</h4>
+                        <p className="text-2xl font-bold text-primary-600">¥4,800<span className="text-sm font-normal text-gray-600">/月</span></p>
+                      </div>
+                      <ul className="space-y-2 text-sm">
+                        <li className="flex items-center text-primary-900">
+                          <span className="mr-2">✅</span>
+                          監視サイト: 5件
+                        </li>
+                        <li className="flex items-center text-primary-900">
+                          <span className="mr-2">✅</span>
+                          日次チェック: 20回/日
+                        </li>
+                        <li className="flex items-center text-primary-900 font-bold">
+                          <span className="mr-2">🌟</span>
+                          スクショ比較機能
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* CTAボタン */}
+                <div className="text-center">
+                  <Link
+                    href="/dashboard?showPricing=true"
+                    className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-primary-600 to-primary-700 text-white text-lg font-bold rounded-full hover:from-primary-700 hover:to-primary-800 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+                  >
+                    <svg className="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                    今すぐProにアップグレード
+                  </Link>
+                  <p className="text-sm text-gray-500 mt-4">
+                    7日間の無料トライアル付き・いつでもキャンセル可能
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* コントロールパネル */}
+            <div className="bg-white rounded-2xl shadow-lg p-6 mb-8 border border-gray-200">
           <div className="grid md:grid-cols-3 gap-6">
             {/* サイト選択 */}
             <div>
@@ -435,10 +581,12 @@ export default function CompareClient({ user, sites }: Props) {
             </div>
           </div>
         )}
+          </>
+        )}
       </div>
 
-      {/* 画像拡大モーダル */}
-      {selectedImage && (
+      {/* 画像拡大モーダル（Pro以上のみ） */}
+      {plan !== "free" && selectedImage && (
         <div
           className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-black bg-opacity-90 p-4 animate-fadeIn"
           onClick={() => setSelectedImage(null)}

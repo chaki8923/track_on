@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 
 /**
  * Cloudflare R2クライアント（S3互換）
@@ -43,6 +43,41 @@ export async function uploadScreenshot(
   await r2Client.send(command);
 
   return `${publicUrl}/${fileName}`;
+}
+
+/**
+ * R2から画像を削除
+ * @param imageUrl 画像のURL
+ */
+export async function deleteScreenshot(imageUrl: string): Promise<void> {
+  if (!isR2Configured()) {
+    console.warn('⚠️ R2が設定されていないため、画像削除をスキップします。');
+    return;
+  }
+
+  const bucketName = process.env.R2_BUCKET_NAME || '';
+  const publicUrl = process.env.R2_PUBLIC_URL || '';
+
+  // URLからファイル名を抽出
+  const fileName = imageUrl.replace(`${publicUrl}/`, '');
+  
+  if (!fileName || fileName === imageUrl) {
+    console.warn('⚠️ 無効なR2 URLです:', imageUrl);
+    return;
+  }
+
+  try {
+    const command = new DeleteObjectCommand({
+      Bucket: bucketName,
+      Key: fileName,
+    });
+
+    await r2Client.send(command);
+    console.log(`✅ R2から画像を削除しました: ${fileName}`);
+  } catch (error) {
+    console.error(`❌ R2画像削除エラー (${fileName}):`, error);
+    // エラーでも処理を続行（DB削除は行う）
+  }
 }
 
 /**

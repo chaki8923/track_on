@@ -13,6 +13,13 @@ export default async function HistoryPage() {
     redirect("/login");
   }
 
+  // ユーザープロフィールを取得
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("plan")
+    .eq("id", session.user.id)
+    .single();
+
   // ユーザーのサイト一覧を取得
   const { data: sites } = await supabase
     .from("monitored_sites")
@@ -50,6 +57,7 @@ export default async function HistoryPage() {
       user={session.user}
       sites={sites || []}
       history={history}
+      plan={profile?.plan || "free"}
     />
   );
 }
