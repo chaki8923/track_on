@@ -18,6 +18,7 @@ type Props = {
     };
     screenshotUrl?: string;
     screenshotBeforeUrl?: string;
+    comparedDate?: string; // 比較対象の日時
   };
   siteName: string;
   siteId: string;
@@ -27,6 +28,13 @@ export default function CheckResultModal({ isOpen, onClose, result, siteName, si
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   
   if (!isOpen) return null;
+
+  // デバッグログ
+  console.log('📊 CheckResultModal - result:', {
+    comparedDate: result.comparedDate,
+    screenshotBeforeUrl: result.screenshotBeforeUrl,
+    screenshotUrl: result.screenshotUrl,
+  });
 
   const importanceConfig = {
     high: {
@@ -159,7 +167,17 @@ export default function CheckResultModal({ isOpen, onClose, result, siteName, si
                     {result.screenshotBeforeUrl && (
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium text-gray-700">前回チェック</p>
+                          <p className="text-sm font-medium text-gray-700">
+                            {result.comparedDate 
+                              ? new Date(result.comparedDate).toLocaleString('ja-JP', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })
+                              : '前回チェック'}
+                          </p>
                           <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded">BEFORE</span>
                         </div>
                         <div 
@@ -184,10 +202,18 @@ export default function CheckResultModal({ isOpen, onClose, result, siteName, si
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <p className="text-sm font-medium text-gray-700">
-                            {result.screenshotBeforeUrl ? '今回チェック' : '現在'}
+                            {result.screenshotBeforeUrl 
+                              ? new Date().toLocaleString('ja-JP', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })
+                              : '現在'}
                           </p>
                           {result.screenshotBeforeUrl && (
-                            <span className="text-xs bg-green-200 text-green-700 px-2 py-1 rounded">AFTER</span>
+                            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">AFTER</span>
                           )}
                         </div>
                         <div 
@@ -252,7 +278,17 @@ export default function CheckResultModal({ isOpen, onClose, result, siteName, si
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {result.screenshotBeforeUrl && (
                       <div className="space-y-2">
-                        <p className="text-sm font-medium text-gray-700">前回チェック</p>
+                        <p className="text-sm font-medium text-gray-700">
+                          {result.comparedDate 
+                            ? new Date(result.comparedDate).toLocaleString('ja-JP', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })
+                            : '前回チェック'}
+                        </p>
                         <div 
                           className="relative group cursor-pointer overflow-hidden rounded-lg border-2 border-gray-300 hover:border-primary-500 transition-all"
                           onClick={() => setSelectedImage(result.screenshotBeforeUrl!)}
@@ -274,7 +310,15 @@ export default function CheckResultModal({ isOpen, onClose, result, siteName, si
                     {result.screenshotUrl && (
                       <div className="space-y-2">
                         <p className="text-sm font-medium text-gray-700">
-                          {result.screenshotBeforeUrl ? '今回チェック' : '現在'}
+                          {result.screenshotBeforeUrl 
+                            ? new Date().toLocaleString('ja-JP', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })
+                            : '現在'}
                         </p>
                         <div 
                           className="relative group cursor-pointer overflow-hidden rounded-lg border-2 border-gray-300 hover:border-primary-500 transition-all"

@@ -8,6 +8,7 @@ import { uploadScreenshot, isR2Configured } from '@/lib/r2';
 
 /**
  * 手動チェックエンドポイント（テスト用）
+ * オプション: snapshot_id を指定すると、そのスナップショットと現在を比較
  */
 export async function POST(
   request: Request,
@@ -22,6 +23,16 @@ export async function POST(
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  // リクエストボディから compareSnapshotId を取得（オプション）
+  let body: { compareSnapshotId?: string } = {};
+  try {
+    body = await request.json();
+  } catch {
+    // ボディがない場合は無視
+  }
+
+  console.log('🔍 リクエストボディ:', body);
 
   // サイト情報を取得
   const { data: site, error: siteError } = await supabase
@@ -63,13 +74,44 @@ export async function POST(
     }
 
     // 前回のスナップショットを取得（スクショURLも含む）
-    const { data: lastSnapshot } = await supabase
-      .from('site_snapshots')
-      .select('*')
-      .eq('site_id', site.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
+    // compareSnapshotId が指定されている場合は、そのスナップショットを使用
+    let lastSnapshot: any = null;
+    
+    if (body.compareSnapshotId) {
+      console.log(`📅 指定されたスナップショットID: ${body.compareSnapshotId}`);
+      
+      // 指定されたスナップショットを取得
+      const { data, error } = await supabase
+        .from('site_snapshots')
+        .select('*')
+        .eq('id', body.compareSnapshotId)
+        .eq('site_id', site.id)
+        .single();
+      
+      if (error) {
+        console.error('❌ スナップショット取得エラー:', error);
+      }
+      
+      lastSnapshot = data;
+      
+      if (lastSnapshot) {
+        console.log(`✅ 指定された日付のスナップショットを使用: ${lastSnapshot.created_at}`);
+      } else {
+        console.warn('⚠️ 指定されたスナップショットが見つかりません');
+      }
+    } else {
+      // 最新のスナップショットを取得
+      const { data } = await supabase
+        .from('site_snapshots')
+        .select('*')
+        .eq('site_id', site.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      
+      lastSnapshot = data;
+      console.log(`📅 最新のスナップショットを使用`);
+    }
 
     // 前回のスクリーンショットURLを取得
     let screenshotBeforeUrl: string | null = null;
@@ -92,19 +134,32 @@ export async function POST(
       .single();
 
     if (snapshotError) {
+      console.error('❌ スナップショット保存エラー詳細:', {
+        message: snapshotError.message,
+        details: snapshotError.details,
+        hint: snapshotError.hint,
+        code: snapshotError.code,
+      });
       throw new Error(`スナップショット保存エラー: ${snapshotError.message}`);
     }
 
     console.log(`💾 スナップショットを保存: ID=${newSnapshot.id}, スクショURL=${screenshotUrl || 'なし'}`);
 
     // 差分チェック
-    let checkHistoryData: any = {
-      site_id: site.id,
-      has_changes: false,
-      check_duration_ms: 0,
-      screenshot_url: screenshotUrl,
-      screenshot_before_url: screenshotBeforeUrl,
-    };
+        let checkHistoryData: any = {
+          site_id: site.id,
+          has_changes: false,
+          check_duration_ms: 0,
+          screenshot_url: screenshotUrl,
+          screenshot_before_url: screenshotBeforeUrl,
+          compared_snapshot_created_at: lastSnapshot?.created_at, // 比較対象の日時を保存
+        };
+
+        console.log('📝 履歴データ準備:', {
+          compared_snapshot_created_at: lastSnapshot?.created_at,
+          screenshot_before_url: screenshotBeforeUrl,
+          has_lastSnapshot: !!lastSnapshot,
+        });
 
     if (lastSnapshot) {
       const diffResult = compareContent(
@@ -217,6 +272,7 @@ export async function POST(
           importance,
           screenshotUrl,
           screenshotBeforeUrl,
+          comparedDate: lastSnapshot?.created_at, // 比較対象の日時
         });
       }
     }
@@ -250,6 +306,7 @@ export async function POST(
       message: '変更は検出されませんでした',
       screenshotUrl,
       screenshotBeforeUrl,
+      comparedDate: lastSnapshot?.created_at, // 比較対象の日時
     });
   } catch (error: any) {
     console.error('Check error:', error);

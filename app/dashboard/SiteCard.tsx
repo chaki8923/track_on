@@ -3,6 +3,7 @@
 import { useState } from "react";
 import CheckingModal from "./CheckingModal";
 import CheckResultModal from "./CheckResultModal";
+import DateSelectModal from "./DateSelectModal";
 
 type Site = {
   id: string;
@@ -25,6 +26,7 @@ export default function SiteCard({ site, onUpdate }: Props) {
   const [checkProgress, setCheckProgress] = useState(0);
   const [showResult, setShowResult] = useState(false);
   const [checkResult, setCheckResult] = useState<any>(null);
+  const [showDateSelect, setShowDateSelect] = useState(false);
 
   const handleToggleActive = async () => {
     setLoading(true);
@@ -74,7 +76,7 @@ export default function SiteCard({ site, onUpdate }: Props) {
     }
   };
 
-  const handleCheckNow = async () => {
+  const handleCheckNow = async (snapshotId?: string) => {
     setChecking(true);
     setShowMenu(false);
     setCheckProgress(0);
@@ -91,6 +93,10 @@ export default function SiteCard({ site, onUpdate }: Props) {
 
       const response = await fetch(`/api/sites/${site.id}/check`, {
         method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: snapshotId ? JSON.stringify({ snapshot_id: snapshotId }) : undefined,
       });
 
       clearInterval(progressInterval);
@@ -116,6 +122,10 @@ export default function SiteCard({ site, onUpdate }: Props) {
       setChecking(false);
       alert(err.message || "チェックに失敗しました");
     }
+  };
+
+  const handleDateSelect = (snapshotId: string, date: string) => {
+    handleCheckNow(snapshotId);
   };
 
   return (
@@ -183,13 +193,26 @@ export default function SiteCard({ site, onUpdate }: Props) {
                   className="fixed inset-0 z-10"
                   onClick={() => setShowMenu(false)}
                 />
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border z-20">
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border z-20">
                   <button
-                    onClick={handleCheckNow}
+                    onClick={() => handleCheckNow()}
                     disabled={loading || checking}
                     className="w-full text-left px-4 py-2 text-sm text-primary-600 hover:bg-primary-50 disabled:opacity-50 border-b"
                   >
                     {checking ? "チェック中..." : "今すぐチェック"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      setShowDateSelect(true);
+                    }}
+                    disabled={loading || checking}
+                    className="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 disabled:opacity-50 border-b flex items-center space-x-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span>日付を指定してチェック</span>
                   </button>
                   <button
                     onClick={handleToggleActive}
@@ -233,6 +256,15 @@ export default function SiteCard({ site, onUpdate }: Props) {
           siteId={site.id}
         />
       )}
+
+      {/* 日付選択モーダル */}
+      <DateSelectModal
+        isOpen={showDateSelect}
+        onClose={() => setShowDateSelect(false)}
+        siteId={site.id}
+        siteName={site.name}
+        onSelectDate={handleDateSelect}
+      />
     </>
   );
 }

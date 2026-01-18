@@ -25,6 +25,7 @@ type HistoryItem = {
   check_duration_ms?: number;
   screenshot_url?: string;
   screenshot_before_url?: string;
+  compared_snapshot_created_at?: string; // 比較対象の日時
   monitored_sites: {
     id: string;
     name: string;
@@ -324,7 +325,17 @@ export default function HistoryClient({ user, sites, history }: Props) {
                       {item.screenshot_before_url && (
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
-                            <p className="text-xs font-medium text-gray-700">前回チェック</p>
+                            <p className="text-xs font-medium text-gray-700">
+                              {item.compared_snapshot_created_at
+                                ? new Date(item.compared_snapshot_created_at).toLocaleString('ja-JP', {
+                                    year: 'numeric',
+                                    month: 'short',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })
+                                : '前回チェック'}
+                            </p>
                             <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">BEFORE</span>
                           </div>
                           <div
@@ -348,7 +359,15 @@ export default function HistoryClient({ user, sites, history }: Props) {
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <p className="text-xs font-medium text-gray-700">
-                            {item.screenshot_before_url ? '今回チェック' : 'チェック時'}
+                            {item.screenshot_before_url 
+                              ? new Date(item.checked_at).toLocaleString('ja-JP', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })
+                              : 'チェック時'}
                           </p>
                           {item.screenshot_before_url && (
                             <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">AFTER</span>
