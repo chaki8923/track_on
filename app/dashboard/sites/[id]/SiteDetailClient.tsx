@@ -213,12 +213,13 @@ export default function SiteDetailClient({ site, changes }: Props) {
             </div>
 
             <div className="p-6 space-y-6">
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-2">
-                  変更率: {selectedChange.diff_summary.changePercentage}%
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="font-semibold text-blue-900 mb-2">
+                  📊 変更箇所
                 </h3>
-                <p className="text-sm text-gray-600">
-                  {selectedChange.diff_summary.changesCount}行の変更を検出
+                <p className="text-2xl font-bold text-blue-700">
+                  {selectedChange.diff_summary.changesCount}
+                  <span className="text-sm font-normal text-blue-600 ml-2">箇所の変更を検出</span>
                 </p>
               </div>
 

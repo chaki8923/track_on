@@ -12,7 +12,6 @@ CREATE TABLE IF NOT EXISTS site_check_history (
   change_id UUID REFERENCES site_changes(id) ON DELETE SET NULL,
   importance TEXT CHECK (importance IN ('high', 'medium', 'low')),
   changes_count INTEGER DEFAULT 0,
-  change_percentage DECIMAL(5, 2) DEFAULT 0,
   
   -- AI要約（変更がある場合のみ）
   ai_summary TEXT,

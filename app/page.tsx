@@ -207,13 +207,6 @@ export default function HomePage() {
           </Link>
         </div>
       </main>
-
-      {/* フッター */}
-      <footer className="container mx-auto px-4 py-12 mt-24 border-t">
-        <div className="text-center text-gray-600">
-          <p>&copy; 2026 Competitive Watcher. All rights reserved.</p>
-        </div>
-      </footer>
     </div>
   );
 }

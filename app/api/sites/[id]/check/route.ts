@@ -44,30 +44,7 @@ export async function POST(
     // スクレイピング実行
     const scrapedContent = await scrapeSite(site.url, { takeScreenshot });
 
-    // 前回のスナップショットを取得
-    const { data: lastSnapshot } = await supabase
-      .from('site_snapshots')
-      .select('*')
-      .eq('site_id', site.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    // スナップショットを保存
-    const { data: newSnapshot, error: snapshotError } = await supabase
-      .from('site_snapshots')
-      .insert({
-        site_id: site.id,
-        html_content: scrapedContent.cleanedHtml,
-      })
-      .select()
-      .single();
-
-    if (snapshotError) {
-      throw new Error(`スナップショット保存エラー: ${snapshotError.message}`);
-    }
-
-    // スクリーンショットをR2にアップロード
+    // スクリーンショットをR2にアップロード（スナップショット保存前に実行）
     let screenshotUrl: string | null = null;
     if (scrapedContent.screenshot && takeScreenshot) {
       try {
@@ -76,12 +53,49 @@ export async function POST(
           site.id,
           Date.now()
         );
-        console.log(`スクリーンショットをアップロード: ${screenshotUrl}`);
+        console.log(`✅ スクリーンショットをR2にアップロード: ${screenshotUrl}`);
       } catch (uploadError) {
-        console.error('スクリーンショットのアップロードに失敗:', uploadError);
+        console.error('❌ スクリーンショットのアップロードに失敗:', uploadError);
         // アップロード失敗してもチェックは続行
       }
+    } else {
+      console.log(`ℹ️ R2設定なし、またはスクショ未取得 (takeScreenshot: ${takeScreenshot}, hasScreenshot: ${!!scrapedContent.screenshot})`);
     }
+
+    // 前回のスナップショットを取得（スクショURLも含む）
+    const { data: lastSnapshot } = await supabase
+      .from('site_snapshots')
+      .select('*')
+      .eq('site_id', site.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    // 前回のスクリーンショットURLを取得
+    let screenshotBeforeUrl: string | null = null;
+    if (lastSnapshot?.screenshot_url) {
+      screenshotBeforeUrl = lastSnapshot.screenshot_url;
+      console.log(`📸 前回のスクショを取得: ${screenshotBeforeUrl}`);
+    } else {
+      console.log(`ℹ️ 前回のスクショなし（初回チェック）`);
+    }
+
+    // スナップショットを保存（スクショURLを含める）
+    const { data: newSnapshot, error: snapshotError } = await supabase
+      .from('site_snapshots')
+      .insert({
+        site_id: site.id,
+        html_content: scrapedContent.cleanedHtml,
+        screenshot_url: screenshotUrl,
+      })
+      .select()
+      .single();
+
+    if (snapshotError) {
+      throw new Error(`スナップショット保存エラー: ${snapshotError.message}`);
+    }
+
+    console.log(`💾 スナップショットを保存: ID=${newSnapshot.id}, スクショURL=${screenshotUrl || 'なし'}`);
 
     // 差分チェック
     let checkHistoryData: any = {
@@ -89,6 +103,7 @@ export async function POST(
       has_changes: false,
       check_duration_ms: 0,
       screenshot_url: screenshotUrl,
+      screenshot_before_url: screenshotBeforeUrl,
     };
 
     if (lastSnapshot) {
@@ -127,9 +142,9 @@ export async function POST(
           change_id: change?.id,
           importance,
           changes_count: diffResult.changesCount,
-          change_percentage: diffResult.changePercentage,
           ai_summary: aiAnalysis.summary,
           ai_intent: aiAnalysis.intent,
+          ai_suggestions: aiAnalysis.suggestions.join('\n'),
         };
 
         // 通知を送信
@@ -182,13 +197,26 @@ export async function POST(
         checkHistoryData.check_duration_ms = duration;
 
         // チェック履歴を保存
-        await supabase.from('site_check_history').insert(checkHistoryData);
+        console.log('📝 履歴保存データ（変更あり）:', JSON.stringify(checkHistoryData, null, 2));
+        const { data: historyData, error: historyError } = await supabase
+          .from('site_check_history')
+          .insert(checkHistoryData)
+          .select()
+          .single();
+
+        if (historyError) {
+          console.error('❌ 履歴保存エラー:', historyError);
+        } else {
+          console.log('✅ 履歴保存成功:', historyData?.id);
+        }
 
         return NextResponse.json({
           hasChanges: true,
           diffResult,
           aiAnalysis,
           importance,
+          screenshotUrl,
+          screenshotBeforeUrl,
         });
       }
     }
@@ -204,11 +232,24 @@ export async function POST(
     checkHistoryData.check_duration_ms = duration;
 
     // チェック履歴を保存（変更なし）
-    await supabase.from('site_check_history').insert(checkHistoryData);
+    console.log('📝 履歴保存データ（変更なし）:', JSON.stringify(checkHistoryData, null, 2));
+    const { data: historyData, error: historyError } = await supabase
+      .from('site_check_history')
+      .insert(checkHistoryData)
+      .select()
+      .single();
+
+    if (historyError) {
+      console.error('❌ 履歴保存エラー:', historyError);
+    } else {
+      console.log('✅ 履歴保存成功:', historyData?.id);
+    }
 
     return NextResponse.json({
       hasChanges: false,
       message: '変更は検出されませんでした',
+      screenshotUrl,
+      screenshotBeforeUrl,
     });
   } catch (error: any) {
     console.error('Check error:', error);
