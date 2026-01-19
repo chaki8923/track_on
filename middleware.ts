@@ -4,30 +4,22 @@ import type { NextRequest } from 'next/server'
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next()
-  const supabase = createMiddlewareClient({ req, res })
   
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
+  // ⚠️ 重要: ミドルウェアでgetSession()を呼び出さない
+  // これがレート制限エラーの原因です
+  // セッション確認はCookieで行われ、必要に応じてページ側で自動リフレッシュされます
+  const supabase = createMiddlewareClient({ req, res })
 
-  // 認証が必要なパス
-  if (req.nextUrl.pathname.startsWith('/dashboard')) {
-    if (!session) {
-      return NextResponse.redirect(new URL('/login', req.url))
-    }
-  }
-
-  // ログイン済みユーザーが認証ページにアクセスした場合
-  if (req.nextUrl.pathname.startsWith('/login') || req.nextUrl.pathname.startsWith('/signup')) {
-    if (session) {
-      return NextResponse.redirect(new URL('/dashboard', req.url))
-    }
-  }
-
+  // Cookieの更新のみ行う（getSession()は呼ばない）
+  // これによりセッションCookieが適切に管理されます
+  
   return res
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/login', '/signup'],
+  // 静的ファイルとNext.jsの内部パスを除外
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
 }
 

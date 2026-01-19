@@ -24,13 +24,20 @@ export default function LoginPage() {
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        // レート制限エラーの場合
+        if (error.message.includes('rate limit')) {
+          throw new Error('アクセスが集中しています。少し時間をおいてから再度お試しください。');
+        }
+        throw error;
+      }
 
       if (data.user) {
         router.push("/dashboard");
         router.refresh();
       }
     } catch (err: any) {
+      console.error('Login error:', err);
       setError(err.message || "ログインに失敗しました");
     } finally {
       setLoading(false);
