@@ -2,17 +2,20 @@ import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
 /**
- * Cron用エンドポイント（Vercel Cron or GitHub Actions用）
- * 本番では認証を追加すること
+ * Cron用エンドポイント（GitHub Actions用）
+ * SUPABASE_SERVICE_ROLE_KEY で認証
  */
 export async function POST(request: Request) {
-  // 簡易認証（本番では必須）
+  // 認証チェック
   const authHeader = request.headers.get('authorization');
-  const expectedToken = process.env.CRON_SECRET;
+  const expectedToken = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (expectedToken && authHeader !== `Bearer ${expectedToken}`) {
+  if (!authHeader || authHeader !== `Bearer ${expectedToken}`) {
+    console.error('[CRON] Unauthorized access attempt');
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  console.log('[CRON] Daily check started at', new Date().toISOString());
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || '',
@@ -37,12 +40,18 @@ export async function POST(request: Request) {
     // 各サイトをチェック
     for (const site of sites || []) {
       try {
+        // 内部APIを呼び出す（絶対URLが必要）
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL 
+          ? `https://${process.env.VERCEL_URL}`
+          : 'http://localhost:3000';
+        
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_APP_URL}/api/sites/${site.id}/check`,
+          `${appUrl}/api/sites/${site.id}/check`,
           {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
             },
           }
         );

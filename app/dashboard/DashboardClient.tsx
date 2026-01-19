@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import AddSiteModal from "./AddSiteModal";
 import SiteCard from "./SiteCard";
 import PricingModal from "./PricingModal";
+import { MdCompareArrows } from "react-icons/md";
 
 type User = {
   id: string;
@@ -16,6 +17,8 @@ type Profile = {
   id: string;
   plan: string;
   created_at: string;
+  daily_check_count?: number;
+  last_check_date?: string;
 } | null;
 
 type Site = {
@@ -53,9 +56,22 @@ export default function DashboardClient({ user, profile, sites }: Props) {
     business: 20,
   };
 
+  const dailyCheckLimits = {
+    free: 5,
+    pro: 20,
+    business: -1, // 無制限
+  };
+
   const currentPlan = profile?.plan || "free";
   const siteLimit = planLimits[currentPlan as keyof typeof planLimits];
   const sitesCount = sites.length;
+
+  // 日次チェック回数の計算
+  const today = new Date().toISOString().split('T')[0];
+  const isToday = profile?.last_check_date === today;
+  const dailyCheckCount = isToday ? (profile?.daily_check_count || 0) : 0;
+  const dailyCheckLimit = dailyCheckLimits[currentPlan as keyof typeof dailyCheckLimits];
+  const remainingChecks = dailyCheckLimit === -1 ? -1 : Math.max(0, dailyCheckLimit - dailyCheckCount);
 
   const handleRefresh = () => {
     router.refresh();
@@ -94,6 +110,13 @@ export default function DashboardClient({ user, profile, sites }: Props) {
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-600">{user.email}</span>
               <a
+                href="/dashboard/compare"
+                className="text-sm text-gray-600 hover:text-gray-900 transition flex items-center space-x-1"
+              >
+                <MdCompareArrows className="text-lg" />
+                <span>スクショ比較</span>
+              </a>
+              <a
                 href="/dashboard/history"
                 className="text-sm text-gray-600 hover:text-gray-900 transition"
               >
@@ -121,16 +144,41 @@ export default function DashboardClient({ user, profile, sites }: Props) {
         {/* プラン情報 */}
         <div className="bg-white rounded-lg shadow p-6 mb-8">
           <div className="flex items-center justify-between">
-            <div>
+            <div className="flex-1">
               <h2 className="text-xl font-semibold text-gray-900">
                 現在のプラン:{" "}
                 <span className="text-primary-600">
                   {currentPlan.toUpperCase()}
                 </span>
               </h2>
-              <p className="text-sm text-gray-600 mt-1">
-                監視サイト数: {sitesCount} / {siteLimit}
-              </p>
+              <div className="flex items-center space-x-6 mt-2">
+                <div>
+                  <p className="text-sm text-gray-600">
+                    監視サイト数: {sitesCount} / {siteLimit}
+                  </p>
+                </div>
+                <div className="border-l border-gray-300 pl-6">
+                  <p className="text-sm text-gray-600">
+                    本日のチェック回数:{" "}
+                    <span className={`font-semibold ${
+                      remainingChecks === 0 ? 'text-red-600' : 
+                      remainingChecks > 0 && remainingChecks <= 2 ? 'text-yellow-600' : 
+                      'text-green-600'
+                    }`}>
+                      {dailyCheckCount} / {dailyCheckLimit === -1 ? '無制限' : dailyCheckLimit}
+                    </span>
+                  </p>
+                  {remainingChecks !== -1 && (
+                    <p className={`text-xs mt-1 ${
+                      remainingChecks === 0 ? 'text-red-600' : 'text-gray-500'
+                    }`}>
+                      {remainingChecks === 0 
+                        ? '❌ 本日の上限に達しました' 
+                        : `✅ 残り${remainingChecks}回`}
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
             {currentPlan === "free" ? (
               <button

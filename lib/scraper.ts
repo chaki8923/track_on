@@ -30,13 +30,22 @@ export async function scrapeSite(
 
     const page = await context.newPage();
     
-    // タイムアウト設定
+    // ページ読み込み（ネットワークアイドルまで待機）
     await page.goto(url, { 
       waitUntil: 'networkidle',
       timeout: 30000 
     });
 
     // JavaScriptの実行を待つ
+    await page.waitForTimeout(1000);
+
+    // レイジーロード画像を読み込むためにスクロール
+    await autoScroll(page);
+
+    // すべての画像が読み込まれるまで待機
+    await waitForImages(page);
+
+    // 追加の待機時間（アニメーションなどの完了を待つ）
     await page.waitForTimeout(2000);
 
     // HTMLを取得
@@ -51,6 +60,7 @@ export async function scrapeSite(
         type: 'jpeg',
         quality: 80, // 圧縮してストレージを節約
       });
+      console.log('📸 スクリーンショット撮影完了');
     }
 
     await context.close();
@@ -67,6 +77,64 @@ export async function scrapeSite(
     };
   } finally {
     await browser.close();
+  }
+}
+
+/**
+ * ページを自動スクロールしてレイジーロード画像を読み込む
+ */
+async function autoScroll(page: any): Promise<void> {
+  await page.evaluate(async () => {
+    await new Promise<void>((resolve) => {
+      let totalHeight = 0;
+      const distance = 300;
+      const timer = setInterval(() => {
+        const scrollHeight = document.body.scrollHeight;
+        window.scrollBy(0, distance);
+        totalHeight += distance;
+
+        if (totalHeight >= scrollHeight) {
+          clearInterval(timer);
+          // スクロール後、トップに戻す
+          window.scrollTo(0, 0);
+          resolve();
+        }
+      }, 100);
+    });
+  });
+}
+
+/**
+ * すべての画像が読み込まれるまで待機
+ */
+async function waitForImages(page: any): Promise<void> {
+  try {
+    await page.evaluate(async () => {
+      const images = Array.from(document.images);
+      
+      await Promise.all(
+        images.map((img) => {
+          // 既に読み込まれている場合
+          if (img.complete) {
+            return Promise.resolve();
+          }
+          
+          // 読み込みを待つ
+          return new Promise<void>((resolve) => {
+            img.addEventListener('load', () => resolve());
+            img.addEventListener('error', () => resolve()); // エラーでも続行
+            
+            // タイムアウト（10秒）
+            setTimeout(() => resolve(), 10000);
+          });
+        })
+      );
+    });
+    
+    console.log('✅ すべての画像の読み込みが完了しました');
+  } catch (error) {
+    console.warn('⚠️ 画像の読み込み待機中にエラーが発生しましたが、続行します:', error);
+    // エラーが発生しても続行
   }
 }
 

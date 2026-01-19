@@ -5,7 +5,6 @@ export type DiffResult = {
   changesCount: number;
   addedLines: string[];
   removedLines: string[];
-  changePercentage: number;
   summary: string;
 };
 
@@ -34,17 +33,13 @@ export function compareContent(
     }
   });
 
-  // 変更率を計算
-  const totalLines = oldContent.split('\n').length;
-  const changePercentage = totalLines > 0 ? (changesCount / totalLines) * 100 : 0;
-
-  // サマリーを生成
+  // サマリーを生成（変更箇所数ベース）
   let summary = '';
   if (changesCount === 0) {
     summary = '変更なし';
-  } else if (changePercentage < 5) {
+  } else if (changesCount < 10) {
     summary = '軽微な変更';
-  } else if (changePercentage < 20) {
+  } else if (changesCount < 50) {
     summary = '中程度の変更';
   } else {
     summary = '大幅な変更';
@@ -55,24 +50,23 @@ export function compareContent(
     changesCount,
     addedLines: addedLines.slice(0, 10), // 最大10行
     removedLines: removedLines.slice(0, 10),
-    changePercentage: Math.round(changePercentage * 100) / 100,
     summary,
   };
 }
 
 /**
- * 差分から重要度を判定
+ * 差分から重要度を判定（変更箇所数ベース）
  */
 export function calculateImportance(diffResult: DiffResult): 'high' | 'medium' | 'low' {
-  const { changePercentage, changesCount } = diffResult;
+  const { changesCount } = diffResult;
 
-  // 大幅な変更 or 多数の変更
-  if (changePercentage > 20 || changesCount > 50) {
+  // 大幅な変更
+  if (changesCount > 50) {
     return 'high';
   }
 
   // 中程度の変更
-  if (changePercentage > 5 || changesCount > 10) {
+  if (changesCount > 10) {
     return 'medium';
   }
 

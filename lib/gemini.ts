@@ -54,16 +54,52 @@ ${removedContent.slice(0, 20).join('\n')}
   try {
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const text = response.text();
+    let text = response.text();
 
-    // JSONを抽出
+    console.log('🤖 Gemini生テキスト（全体）:', text);
+
+    // マークダウンコードブロックを除去
+    text = text.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+
+    // JSONを抽出（最初の{から最後の}まで）
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
+      console.error('❌ JSON抽出失敗。テキスト:', text);
       throw new Error('JSONの抽出に失敗しました');
     }
 
-    const analysis: AIAnalysis = JSON.parse(jsonMatch[0]);
+    let jsonString = jsonMatch[0];
+    console.log('📦 抽出したJSON:', jsonString);
 
+    // JSONパース試行（複数の方法でトライ）
+    let analysis: AIAnalysis;
+    
+    try {
+      // 方法1: そのままパース
+      analysis = JSON.parse(jsonString);
+    } catch (e1) {
+      console.warn('⚠️ パース失敗（方法1）。制御文字のクリーンアップを試行...');
+      
+      try {
+        // 方法2: 制御文字をクリーンアップしてパース
+        // 文字列値内の改行などを安全に処理
+        const cleaned = jsonString
+          .replace(/\\n/g, '\\n')  // 既にエスケープされているものはそのまま
+          .replace(/\\r/g, '\\r')
+          .replace(/\\t/g, '\\t')
+          .replace(/\r/g, '')  // 生の改行文字は削除
+          .replace(/\n/g, '\\n')  // 生の改行をエスケープ
+          .replace(/\t/g, ' ');  // タブはスペースに
+        
+        console.log('🧹 クリーンアップ後:', cleaned.substring(0, 200));
+        analysis = JSON.parse(cleaned);
+      } catch (e2) {
+        console.error('❌ パース失敗（方法2）:', e2);
+        throw new Error('JSONのパースに失敗しました');
+      }
+    }
+
+    console.log('✅ パース成功:', analysis);
     return analysis;
   } catch (error) {
     console.error('Gemini API error:', error);

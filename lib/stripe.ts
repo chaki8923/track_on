@@ -19,4 +19,3 @@ export const STRIPE_PLANS = {
     sitesLimit: 20,
   },
 };
-

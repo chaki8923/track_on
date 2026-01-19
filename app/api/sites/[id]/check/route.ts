@@ -5,9 +5,11 @@ import { compareContent, calculateImportance } from '@/lib/differ';
 import { analyzeDiff } from '@/lib/gemini';
 import { notifyChange } from '@/lib/notifications';
 import { uploadScreenshot, isR2Configured } from '@/lib/r2';
+import { getDailyCheckLimit } from '@/lib/stripe';
 
 /**
  * 手動チェックエンドポイント（テスト用）
+ * オプション: snapshot_id を指定すると、そのスナップショットと現在を比較
  */
 export async function POST(
   request: Request,
@@ -21,6 +23,43 @@ export async function POST(
 
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+
+  // ユーザーのプロフィールを取得（プランと日次チェック回数を確認）
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('plan, daily_check_count, last_check_date')
+    .eq('id', session.user.id)
+    .single();
+
+  if (profileError || !profile) {
+    return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+  }
+
+  // 日次チェック制限を確認
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  const dailyLimit = getDailyCheckLimit(profile.plan);
+  
+  // 日付が変わっていたらカウントをリセット
+  let currentCheckCount = profile.daily_check_count || 0;
+  if (profile.last_check_date !== today) {
+    currentCheckCount = 0;
+  }
+
+  // 制限チェック（無制限でない場合）
+  if (dailyLimit !== -1 && currentCheckCount >= dailyLimit) {
+    console.log(`🚫 日次チェック制限超過: ${currentCheckCount}/${dailyLimit} (プラン: ${profile.plan})`);
+    return NextResponse.json(
+      { 
+        error: '本日のチェック回数が上限に達しました', 
+        dailyLimit,
+        currentCount: currentCheckCount,
+        plan: profile.plan,
+        needsUpgrade: true,
+      },
+      { status: 429 } // Too Many Requests
+    );
   }
 
   // サイト情報を取得
@@ -37,6 +76,22 @@ export async function POST(
 
   try {
     const startTime = Date.now();
+
+    // チェック回数をインクリメント
+    const newCheckCount = currentCheckCount + 1;
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({
+        daily_check_count: newCheckCount,
+        last_check_date: today,
+      })
+      .eq('id', session.user.id);
+
+    if (updateError) {
+      console.error('⚠️ チェック回数の更新に失敗:', updateError);
+    } else {
+      console.log(`✅ チェック回数を更新: ${newCheckCount}/${dailyLimit === -1 ? '無制限' : dailyLimit} (プラン: ${profile.plan})`);
+    }
     
     // R2が設定されている場合はスクリーンショットを撮影
     const takeScreenshot = isR2Configured();
@@ -44,30 +99,7 @@ export async function POST(
     // スクレイピング実行
     const scrapedContent = await scrapeSite(site.url, { takeScreenshot });
 
-    // 前回のスナップショットを取得
-    const { data: lastSnapshot } = await supabase
-      .from('site_snapshots')
-      .select('*')
-      .eq('site_id', site.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    // スナップショットを保存
-    const { data: newSnapshot, error: snapshotError } = await supabase
-      .from('site_snapshots')
-      .insert({
-        site_id: site.id,
-        html_content: scrapedContent.cleanedHtml,
-      })
-      .select()
-      .single();
-
-    if (snapshotError) {
-      throw new Error(`スナップショット保存エラー: ${snapshotError.message}`);
-    }
-
-    // スクリーンショットをR2にアップロード
+    // スクリーンショットをR2にアップロード（スナップショット保存前に実行）
     let screenshotUrl: string | null = null;
     if (scrapedContent.screenshot && takeScreenshot) {
       try {
@@ -76,20 +108,73 @@ export async function POST(
           site.id,
           Date.now()
         );
-        console.log(`スクリーンショットをアップロード: ${screenshotUrl}`);
+        console.log(`✅ スクリーンショットをR2にアップロード: ${screenshotUrl}`);
       } catch (uploadError) {
-        console.error('スクリーンショットのアップロードに失敗:', uploadError);
+        console.error('❌ スクリーンショットのアップロードに失敗:', uploadError);
         // アップロード失敗してもチェックは続行
       }
+    } else {
+      console.log(`ℹ️ R2設定なし、またはスクショ未取得 (takeScreenshot: ${takeScreenshot}, hasScreenshot: ${!!scrapedContent.screenshot})`);
     }
 
+    // 前回のスナップショットを取得（スクショURLも含む）
+    const { data: lastSnapshot } = await supabase
+      .from('site_snapshots')
+      .select('*')
+      .eq('site_id', site.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+    
+    console.log(`📅 最新のスナップショットを使用`);
+
+    // 前回のスクリーンショットURLを取得
+    let screenshotBeforeUrl: string | null = null;
+    if (lastSnapshot?.screenshot_url) {
+      screenshotBeforeUrl = lastSnapshot.screenshot_url;
+      console.log(`📸 前回のスクショを取得: ${screenshotBeforeUrl}`);
+    } else {
+      console.log(`ℹ️ 前回のスクショなし（初回チェック）`);
+    }
+
+    // スナップショットを保存（スクショURLを含める）
+    const { data: newSnapshot, error: snapshotError } = await supabase
+      .from('site_snapshots')
+      .insert({
+        site_id: site.id,
+        html_content: scrapedContent.cleanedHtml,
+        screenshot_url: screenshotUrl,
+      })
+      .select()
+      .single();
+
+    if (snapshotError) {
+      console.error('❌ スナップショット保存エラー詳細:', {
+        message: snapshotError.message,
+        details: snapshotError.details,
+        hint: snapshotError.hint,
+        code: snapshotError.code,
+      });
+      throw new Error(`スナップショット保存エラー: ${snapshotError.message}`);
+    }
+
+    console.log(`💾 スナップショットを保存: ID=${newSnapshot.id}, スクショURL=${screenshotUrl || 'なし'}`);
+
     // 差分チェック
-    let checkHistoryData: any = {
-      site_id: site.id,
-      has_changes: false,
-      check_duration_ms: 0,
-      screenshot_url: screenshotUrl,
-    };
+        let checkHistoryData: any = {
+          site_id: site.id,
+          has_changes: false,
+          check_duration_ms: 0,
+          screenshot_url: screenshotUrl,
+          screenshot_before_url: screenshotBeforeUrl,
+          compared_snapshot_created_at: lastSnapshot?.created_at, // 比較対象の日時を保存
+        };
+
+        console.log('📝 履歴データ準備:', {
+          compared_snapshot_created_at: lastSnapshot?.created_at,
+          screenshot_before_url: screenshotBeforeUrl,
+          has_lastSnapshot: !!lastSnapshot,
+        });
 
     if (lastSnapshot) {
       const diffResult = compareContent(
@@ -127,9 +212,9 @@ export async function POST(
           change_id: change?.id,
           importance,
           changes_count: diffResult.changesCount,
-          change_percentage: diffResult.changePercentage,
           ai_summary: aiAnalysis.summary,
           ai_intent: aiAnalysis.intent,
+          ai_suggestions: aiAnalysis.suggestions.join('\n'),
         };
 
         // 通知を送信
@@ -182,13 +267,27 @@ export async function POST(
         checkHistoryData.check_duration_ms = duration;
 
         // チェック履歴を保存
-        await supabase.from('site_check_history').insert(checkHistoryData);
+        console.log('📝 履歴保存データ（変更あり）:', JSON.stringify(checkHistoryData, null, 2));
+        const { data: historyData, error: historyError } = await supabase
+          .from('site_check_history')
+          .insert(checkHistoryData)
+          .select()
+          .single();
+
+        if (historyError) {
+          console.error('❌ 履歴保存エラー:', historyError);
+        } else {
+          console.log('✅ 履歴保存成功:', historyData?.id);
+        }
 
         return NextResponse.json({
           hasChanges: true,
           diffResult,
           aiAnalysis,
           importance,
+          screenshotUrl,
+          screenshotBeforeUrl,
+          comparedDate: lastSnapshot?.created_at, // 比較対象の日時
         });
       }
     }
@@ -204,11 +303,25 @@ export async function POST(
     checkHistoryData.check_duration_ms = duration;
 
     // チェック履歴を保存（変更なし）
-    await supabase.from('site_check_history').insert(checkHistoryData);
+    console.log('📝 履歴保存データ（変更なし）:', JSON.stringify(checkHistoryData, null, 2));
+    const { data: historyData, error: historyError } = await supabase
+      .from('site_check_history')
+      .insert(checkHistoryData)
+      .select()
+      .single();
+
+    if (historyError) {
+      console.error('❌ 履歴保存エラー:', historyError);
+    } else {
+      console.log('✅ 履歴保存成功:', historyData?.id);
+    }
 
     return NextResponse.json({
       hasChanges: false,
       message: '変更は検出されませんでした',
+      screenshotUrl,
+      screenshotBeforeUrl,
+      comparedDate: lastSnapshot?.created_at, // 比較対象の日時
     });
   } catch (error: any) {
     console.error('Check error:', error);
