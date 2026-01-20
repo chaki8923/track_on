@@ -31,13 +31,14 @@ export async function GET(request: Request) {
 
   const siteIds = sites.map((s) => s.id);
 
-  // スナップショットを取得
+  // site_check_historyからスクリーンショットを取得
+  // これにより、履歴削除時にスクリーンショットも比較画面から消える
   let query = supabase
-    .from('site_snapshots')
+    .from('site_check_history')
     .select(`
       id,
       site_id,
-      created_at,
+      checked_at,
       screenshot_url,
       monitored_sites (
         id,
@@ -47,7 +48,7 @@ export async function GET(request: Request) {
     `)
     .in('site_id', siteIds)
     .not('screenshot_url', 'is', null)
-    .order('created_at', { ascending: false })
+    .order('checked_at', { ascending: false })
     .limit(100);
 
   // site_idが指定されている場合はフィルタ

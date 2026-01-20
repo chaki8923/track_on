@@ -587,7 +587,7 @@ export default function HistoryClient({ user, sites, history, plan }: Props) {
       {showScrollTop && (
         <button
           onClick={scrollToTop}
-          className="fixed bottom-8 right-8 bg-primary-600 text-white p-4 rounded-full shadow-lg hover:bg-primary-700 transition-all duration-300 z-40 animate-fadeIn"
+          className="fixed bottom-8 left-8 bg-primary-600 text-white p-4 rounded-full shadow-lg hover:bg-primary-700 transition-all duration-300 z-40 animate-fadeIn"
           aria-label="トップに戻る"
         >
           <svg

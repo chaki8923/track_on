@@ -26,7 +26,7 @@ type Site = {
 type Snapshot = {
   id: string;
   site_id: string;
-  created_at: string;
+  checked_at: string;
   screenshot_url: string;
   monitored_sites: {
     id: string;
@@ -330,7 +330,7 @@ export default function CompareClient({ user, sites, plan }: Props) {
                 <option value="">日付を選択...</option>
                 {snapshots.map((snap) => (
                   <option key={snap.id} value={snap.id}>
-                    {new Date(snap.created_at).toLocaleString('ja-JP', {
+                    {new Date(snap.checked_at).toLocaleString('ja-JP', {
                       year: 'numeric',
                       month: 'short',
                       day: 'numeric',
@@ -357,7 +357,7 @@ export default function CompareClient({ user, sites, plan }: Props) {
                 <option value="">日付を選択...</option>
                 {snapshots.map((snap) => (
                   <option key={snap.id} value={snap.id}>
-                    {new Date(snap.created_at).toLocaleString('ja-JP', {
+                    {new Date(snap.checked_at).toLocaleString('ja-JP', {
                       year: 'numeric',
                       month: 'short',
                       day: 'numeric',
@@ -444,7 +444,7 @@ export default function CompareClient({ user, sites, plan }: Props) {
                 <div>
                   <h3 className="text-lg font-bold">比較元</h3>
                   <p className="text-sm text-gray-100">
-                    {snap1 && new Date(snap1.created_at).toLocaleString('ja-JP')}
+                    {snap1 && new Date(snap1.checked_at).toLocaleString('ja-JP')}
                   </p>
                 </div>
                 <HiCamera className="text-3xl" />
@@ -452,7 +452,7 @@ export default function CompareClient({ user, sites, plan }: Props) {
               <div
                 ref={leftScrollRef}
                 onScroll={() => handleScroll('left')}
-                className="overflow-y-auto max-h-[calc(100vh-200px)] bg-gray-50"
+                className="overflow-y-auto max-h-[calc(100vh-50px)] bg-gray-50"
               >
                 {snap1?.screenshot_url && (
                   <img
@@ -471,7 +471,7 @@ export default function CompareClient({ user, sites, plan }: Props) {
                 <div>
                   <h3 className="text-lg font-bold">比較先</h3>
                   <p className="text-sm text-primary-100">
-                    {snap2 && new Date(snap2.created_at).toLocaleString('ja-JP')}
+                    {snap2 && new Date(snap2.checked_at).toLocaleString('ja-JP')}
                   </p>
                 </div>
                 <HiCamera className="text-3xl" />
@@ -479,7 +479,7 @@ export default function CompareClient({ user, sites, plan }: Props) {
               <div
                 ref={rightScrollRef}
                 onScroll={() => handleScroll('right')}
-                className="overflow-y-auto max-h-[calc(100vh-200px)] bg-gray-50"
+                className="overflow-y-auto max-h-[calc(100vh-50px)] bg-gray-50"
               >
                 {snap2?.screenshot_url && (
                   <img
@@ -501,14 +501,14 @@ export default function CompareClient({ user, sites, plan }: Props) {
                   <div>
                     <span className="text-xs text-gray-300">比較元</span>
                     <p className="text-sm font-medium">
-                      {snap1 && new Date(snap1.created_at).toLocaleString('ja-JP')}
+                      {snap1 && new Date(snap1.checked_at).toLocaleString('ja-JP')}
                     </p>
                   </div>
                   <MdCompareArrows className="text-2xl" />
                   <div>
                     <span className="text-xs text-gray-300">比較先</span>
                     <p className="text-sm font-medium">
-                      {snap2 && new Date(snap2.created_at).toLocaleString('ja-JP')}
+                      {snap2 && new Date(snap2.checked_at).toLocaleString('ja-JP')}
                     </p>
                   </div>
                 </div>

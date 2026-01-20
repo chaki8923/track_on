@@ -19,3 +19,21 @@ export const STRIPE_PLANS = {
     sitesLimit: 20,
   },
 };
+
+/**
+ * プランに応じた日次チェック制限を返す
+ * @param plan ユーザーのプラン ('free', 'pro', 'business')
+ * @returns 日次チェック制限数 (-1は無制限)
+ */
+export function getDailyCheckLimit(plan: string): number {
+  switch (plan) {
+    case 'free':
+      return 3; // 無料プランは1日3回まで
+    case 'pro':
+      return 30; // Proプランは1日30回まで
+    case 'business':
+      return -1; // Businessプランは無制限
+    default:
+      return 3; // デフォルトは無料プラン
+  }
+}
