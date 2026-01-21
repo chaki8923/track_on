@@ -30,23 +30,49 @@ export async function scrapeSite(
 
     const page = await context.newPage();
     
-    // ページ読み込み（ネットワークアイドルまで待機）
-    await page.goto(url, { 
-      waitUntil: 'networkidle',
-      timeout: 30000 
-    });
+    // ページ読み込み（より柔軟な戦略）
+    try {
+      // まず domcontentloaded で待機（より早く完了する）
+      await page.goto(url, { 
+        waitUntil: 'domcontentloaded',
+        timeout: 60000 // 60秒に延長
+      });
+
+      // ネットワークがアイドルになるまで待つ（タイムアウトしても続行）
+      try {
+        await page.waitForLoadState('networkidle', { timeout: 20000 });
+      } catch (networkIdleError) {
+        console.log('⚠️ ネットワークアイドル待機がタイムアウトしましたが、続行します');
+      }
+    } catch (gotoError) {
+      console.error('❌ ページ読み込みエラー:', gotoError);
+      throw new Error(`サイトへのアクセスに失敗しました: ${url}`);
+    }
 
     // JavaScriptの実行を待つ
     await page.waitForTimeout(1000);
 
-    // レイジーロード画像を読み込むためにスクロール
-    await autoScroll(page);
+    // レイジーロード画像を読み込むためにスクロール（タイムアウト付き）
+    try {
+      await Promise.race([
+        autoScroll(page),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('AutoScroll timeout')), 10000)
+        )
+      ]);
+    } catch (scrollError) {
+      console.log('⚠️ 自動スクロールがタイムアウトしましたが、続行します');
+    }
 
-    // すべての画像が読み込まれるまで待機
-    await waitForImages(page);
+    // すべての画像が読み込まれるまで待機（タイムアウト付き）
+    try {
+      await waitForImages(page);
+    } catch (imageError) {
+      console.log('⚠️ 画像読み込み待機をスキップしました');
+    }
 
     // 追加の待機時間（アニメーションなどの完了を待つ）
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(1500);
 
     // HTMLを取得
     const html = await page.content();
@@ -55,12 +81,18 @@ export async function scrapeSite(
     // スクリーンショットを撮影（オプション）
     let screenshot: Buffer | undefined;
     if (options.takeScreenshot) {
-      screenshot = await page.screenshot({
-        fullPage: true,
-        type: 'jpeg',
-        quality: 80, // 圧縮してストレージを節約
-      });
-      console.log('📸 スクリーンショット撮影完了');
+      try {
+        screenshot = await page.screenshot({
+          fullPage: true,
+          type: 'jpeg',
+          quality: 80, // 圧縮してストレージを節約
+          timeout: 30000, // スクリーンショットのタイムアウト
+        });
+        console.log('📸 スクリーンショット撮影完了');
+      } catch (screenshotError) {
+        console.error('⚠️ スクリーンショット撮影に失敗しましたが、続行します:', screenshotError);
+        // スクリーンショット失敗してもチェックは続行
+      }
     }
 
     await context.close();
