@@ -3,6 +3,7 @@
 import { useState } from "react";
 import CheckingModal from "./CheckingModal";
 import CheckResultModal from "./CheckResultModal";
+import DeleteSiteModal from "./DeleteSiteModal";
 
 type Site = {
   id: string;
@@ -27,6 +28,8 @@ export default function SiteCard({ site, onUpdate }: Props) {
   const [checkResult, setCheckResult] = useState<any>(null);
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [limitInfo, setLimitInfo] = useState<any>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const handleToggleActive = async () => {
     setLoading(true);
@@ -54,25 +57,36 @@ export default function SiteCard({ site, onUpdate }: Props) {
   };
 
   const handleDelete = async () => {
-    if (!confirm("本当に削除しますか？")) return;
-
-    setLoading(true);
+    setDeleting(true);
+    setShowMenu(false);
+    
     try {
       const response = await fetch(`/api/sites/${site.id}`, {
         method: "DELETE",
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error("削除に失敗しました");
+        throw new Error(data.error || "削除に失敗しました");
+      }
+
+      console.log(`✅ サイトを削除しました: ${site.name}`, data);
+      
+      // 成功メッセージを表示
+      if (data.deletedScreenshots > 0) {
+        alert(`「${site.name}」を削除しました。\n${data.deletedScreenshots}枚のスクリーンショットもR2から削除されました。`);
+      } else {
+        alert(`「${site.name}」を削除しました。`);
       }
 
       onUpdate();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("削除に失敗しました");
+      alert(err.message || "削除に失敗しました");
     } finally {
-      setLoading(false);
-      setShowMenu(false);
+      setDeleting(false);
+      setShowDeleteModal(false);
     }
   };
 
@@ -209,11 +223,17 @@ export default function SiteCard({ site, onUpdate }: Props) {
                     {site.is_active ? "監視を停止" : "監視を開始"}
                   </button>
                   <button
-                    onClick={handleDelete}
+                    onClick={() => {
+                      setShowMenu(false);
+                      setShowDeleteModal(true);
+                    }}
                     disabled={loading || checking}
-                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50 flex items-center space-x-2"
                   >
-                    削除
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    <span>削除</span>
                   </button>
                 </div>
               </>
@@ -244,6 +264,14 @@ export default function SiteCard({ site, onUpdate }: Props) {
         />
       )}
 
+      {/* 削除確認モーダル */}
+      <DeleteSiteModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDelete}
+        siteName={site.name}
+        loading={deleting}
+      />
 
       {/* 制限超過モーダル */}
       {showLimitModal && limitInfo && (
