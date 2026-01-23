@@ -293,7 +293,7 @@ export default function DashboardClient({ user, profile, sites }: Props) {
                     }`}>
                       {remainingChecks === 0 
                         ? '❌ 本日の上限に達しました' 
-                        : `✅ 残り${remainingChecks}回`}
+                        : `残り${remainingChecks}回`}
                     </p>
                   )}
                 </div>
