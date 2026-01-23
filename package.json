@@ -11,15 +11,15 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.966.0",
     "@google/generative-ai": "^0.21.0",
-    "@sparticuz/chromium": "^126.0.0",
     "@stripe/stripe-js": "^4.8.0",
     "@supabase/auth-helpers-nextjs": "^0.8.7",
     "@supabase/supabase-js": "^2.39.0",
+    "chrome-aws-lambda": "^10.1.0",
     "date-fns": "^4.1.0",
     "diff": "^7.0.0",
     "next": "14.2.35",
     "node-html-parser": "^6.1.13",
-    "puppeteer-core": "^22.15.0",
+    "puppeteer-core": "^10.4.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-icons": "^5.5.0",
@@ -37,7 +37,7 @@
     "eslint-config-next": "14.2.22",
     "playwright": "^1.48.2",
     "postcss": "^8",
-    "puppeteer": "^22.15.0",
+    "puppeteer": "^23.11.1",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
   }

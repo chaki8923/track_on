@@ -23,31 +23,16 @@ export async function scrapeSite(
   let browser;
   
   if (isProduction) {
-    // 本番環境: puppeteer-core + @sparticuz/chromium
+    // 本番環境: puppeteer-core + chrome-aws-lambda
     const puppeteerCore = await import('puppeteer-core');
-    const chromium = await import('@sparticuz/chromium');
-    
-    // Lambda/Vercelの環境変数を設定
-    process.env.FONTCONFIG_PATH = '/tmp';
-    
-    const executablePath = await chromium.default.executablePath();
-    
-    console.log('🔍 Chromium executablePath:', executablePath);
+    const chromium = await import('chrome-aws-lambda');
     
     browser = await puppeteerCore.default.launch({
-      args: [
-        ...chromium.default.args,
-        '--disable-gpu',
-        '--disable-dev-shm-usage',
-        '--disable-setuid-sandbox',
-        '--no-first-run',
-        '--no-sandbox',
-        '--no-zygote',
-        '--single-process',
-      ],
+      args: chromium.default.args,
       defaultViewport: chromium.default.defaultViewport,
-      executablePath,
+      executablePath: await chromium.default.executablePath,
       headless: chromium.default.headless,
+      ignoreHTTPSErrors: true,
     });
   } else {
     // 開発環境: puppeteer (Chromium同梱版)
