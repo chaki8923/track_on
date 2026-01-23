@@ -7,14 +7,8 @@ const nextConfig = {
   },
   webpack: (config, { isServer }) => {
     if (isServer) {
-      // chrome-aws-lambdaのソースマップを除外
-      config.module.rules.push({
-        test: /\.map$/,
-        use: 'ignore-loader',
-      });
-      
-      // chrome-aws-lambdaを外部化
-      config.externals = [...(config.externals || []), 'chrome-aws-lambda'];
+      // @sparticuz/chromiumを外部化
+      config.externals = [...(config.externals || []), '@sparticuz/chromium'];
     }
     return config;
   },

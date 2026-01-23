@@ -23,14 +23,16 @@ export async function scrapeSite(
   let browser;
   
   if (isProduction) {
-    // 本番環境: puppeteer-core + chrome-aws-lambda
+    // 本番環境: puppeteer-core + @sparticuz/chromium
     const puppeteerCore = await import('puppeteer-core');
-    const chromium = await import('chrome-aws-lambda');
+    const chromium = await import('@sparticuz/chromium');
+    
+    console.log('🚀 Launching browser in production mode');
     
     browser = await puppeteerCore.default.launch({
       args: chromium.default.args,
       defaultViewport: chromium.default.defaultViewport,
-      executablePath: await chromium.default.executablePath,
+      executablePath: await chromium.default.executablePath(),
       headless: chromium.default.headless,
       ignoreHTTPSErrors: true,
     });
