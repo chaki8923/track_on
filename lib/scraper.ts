@@ -23,15 +23,18 @@ export async function scrapeSite(
   let browser;
   
   if (isProduction) {
-    // 本番環境: puppeteer-core + @sparticuz/chromium
+    // 本番環境: puppeteer-core + @sparticuz/chromium-min（外部バイナリ使用）
     const puppeteerCore = await import('puppeteer-core');
-    const chromium = await import('@sparticuz/chromium');
+    const chromium = await import('@sparticuz/chromium-min');
     
-    console.log('🚀 Launching browser in production mode');
+    console.log('🚀 Launching browser in production mode (using external chromium)');
     
-    // Chromiumのフォントを有効化（日本語対応）
-    chromium.default.setHeadlessMode = true;
-    chromium.default.setGraphicsMode = false;
+    // 外部からChromiumバイナリをダウンロード
+    const executablePath = await chromium.default.executablePath(
+      'https://github.com/Sparticuz/chromium/releases/download/v131.0.1/chromium-v131.0.1-pack.tar'
+    );
+    
+    console.log('📦 Chromium executable path:', executablePath);
     
     browser = await puppeteerCore.default.launch({
       args: [
@@ -39,9 +42,10 @@ export async function scrapeSite(
         '--disable-gpu',
         '--disable-dev-shm-usage',
         '--no-first-run',
+        '--single-process',
       ],
       defaultViewport: { width: 1920, height: 1080 },
-      executablePath: await chromium.default.executablePath(),
+      executablePath,
       headless: true,
     });
   } else {
