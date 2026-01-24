@@ -39,3 +39,10 @@ next-env.d.ts
 /playwright-report/
 /playwright/.cache/
 
+# terraform
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/*.zip
+
