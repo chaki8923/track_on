@@ -54,19 +54,13 @@ resource "aws_lambda_function" "scraper" {
   filename         = data.archive_file.lambda_zip.output_path
   function_name    = "competitive-watcher-scraper"
   role            = aws_iam_role.lambda_scraper_role.arn
-  handler         = "handler.lambda_handler"
+  handler         = "handler.handler"
   source_code_hash = data.archive_file.lambda_zip.output_base64sha256
-  runtime         = "python3.11"
+  runtime         = "nodejs20.x"
   timeout         = 120
-  memory_size     = 2048
+  memory_size     = 3008
 
-  layers = [
-    # 公開されているChrome/ChromeDriverレイヤーを使用
-    # リージョンに応じて変更してください
-    # 例: us-east-1の場合
-    # "arn:aws:lambda:us-east-1:764866452798:layer:chrome-aws-lambda:31"
-    var.chrome_layer_arn
-  ]
+  # chromium-minを直接含めるのでレイヤー不要
 
   environment {
     variables = {

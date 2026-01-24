@@ -5,9 +5,9 @@ variable "aws_region" {
 }
 
 variable "chrome_layer_arn" {
-  description = "ARN of the Chrome/ChromeDriver Lambda Layer"
+  description = "ARN of the Chromium Lambda Layer for @sparticuz/chromium"
   type        = string
-  # リージョンごとに異なるARNを使用
-  # 東京リージョン (ap-northeast-1) の例:
-  default     = "arn:aws:lambda:ap-northeast-1:764866452798:layer:chrome-aws-lambda:31"
+  # @sparticuz/chromium用の公開レイヤー
+  # 東京リージョン (ap-northeast-1):
+  default     = "arn:aws:lambda:ap-northeast-1:041475135427:layer:chromium:1"
 }

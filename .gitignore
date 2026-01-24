@@ -46,3 +46,6 @@ terraform/*.tfstate
 terraform/*.tfstate.backup
 terraform/*.zip
 
+# lambda
+lambda/node_modules/
+

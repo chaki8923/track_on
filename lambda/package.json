@@ -1,0 +1,10 @@
+{
+  "name": "competitive-watcher-scraper",
+  "version": "1.0.0",
+  "description": "Lambda scraper using Puppeteer and Chromium",
+  "main": "handler.js",
+  "dependencies": {
+    "@sparticuz/chromium-min": "^131.0.0",
+    "puppeteer-core": "^23.11.0"
+  }
+}
