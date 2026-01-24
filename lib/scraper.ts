@@ -29,12 +29,20 @@ export async function scrapeSite(
     
     console.log('🚀 Launching browser in production mode');
     
+    // Chromiumのフォントを有効化（日本語対応）
+    chromium.default.setHeadlessMode = true;
+    chromium.default.setGraphicsMode = false;
+    
     browser = await puppeteerCore.default.launch({
-      args: chromium.default.args,
-      defaultViewport: chromium.default.defaultViewport,
+      args: [
+        ...chromium.default.args,
+        '--disable-gpu',
+        '--disable-dev-shm-usage',
+        '--no-first-run',
+      ],
+      defaultViewport: { width: 1920, height: 1080 },
       executablePath: await chromium.default.executablePath(),
       headless: true,
-      ignoreHTTPSErrors: true,
     });
   } else {
     // 開発環境: puppeteer (Chromium同梱版)

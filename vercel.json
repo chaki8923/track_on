@@ -2,5 +2,15 @@
   "buildCommand": "npm run build",
   "env": {
     "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true"
+  },
+  "functions": {
+    "app/api/sites/[id]/check/route.ts": {
+      "memory": 1024,
+      "maxDuration": 60
+    },
+    "app/api/cron/daily-check/route.ts": {
+      "memory": 1024,
+      "maxDuration": 60
+    }
   }
 }
