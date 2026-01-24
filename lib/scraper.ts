@@ -20,6 +20,13 @@ export async function scrapeSite(
   // Vercel環境判定
   const isProduction = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
 
+  console.log('🔍 Environment check:', {
+    VERCEL: process.env.VERCEL,
+    AWS_LAMBDA: process.env.AWS_LAMBDA_FUNCTION_NAME,
+    NODE_ENV: process.env.NODE_ENV,
+    isProduction,
+  });
+
   let browser;
   
   if (isProduction) {
@@ -29,10 +36,14 @@ export async function scrapeSite(
     
     console.log('🚀 Launching browser in production mode (chrome-aws-lambda)');
     
+    const execPath = await chromium.default.executablePath;
+    console.log('📍 Chromium executable path:', execPath);
+    console.log('📦 Chromium args:', chromium.default.args);
+    
     browser = await puppeteerCore.default.launch({
       args: chromium.default.args,
       defaultViewport: chromium.default.defaultViewport,
-      executablePath: await chromium.default.executablePath,
+      executablePath: execPath,
       headless: chromium.default.headless,
       ignoreHTTPSErrors: true,
     });
