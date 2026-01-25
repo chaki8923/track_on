@@ -10,6 +10,9 @@ const r2Client = new S3Client({
     accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
   },
+  // ★重要: AWS SDK v3とR2の互換性問題を回避する設定
+  // これがないとAccessDeniedやSignatureDoesNotMatchエラーになることがある
+  requestChecksumCalculation: 'WHEN_REQUIRED',
 });
 
 exports.handler = async (event, context) => {
@@ -34,8 +37,16 @@ exports.handler = async (event, context) => {
 
     // Puppeteerでブラウザを起動
     browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
+      args: [
+        ...chromium.args,
+        '--window-size=1920,1080', // ★修正: ウィンドウサイズをフルHDに強制
+        '--hide-scrollbars',       // スクロールバーを隠す
+      ],
+      defaultViewport: {
+        width: 1920,
+        height: 1080,
+        deviceScaleFactor: 1,
+      },
       executablePath: await chromium.executablePath(),
       headless: chromium.headless,
       ignoreHTTPSErrors: true,
@@ -118,11 +129,25 @@ exports.handler = async (event, context) => {
     // スクリーンショット撮影とR2アップロード
     let screenshotUrl = null;
     if (takeScreenshot && siteId) {
-      console.log('📸 スクリーンショット撮影中...');
+      console.log('📸 スクリーンショット撮影準備中...');
+
+      // ★修正: 撮影直前にCSSを調整して「下切れ」を防ぐ
+      // height: 100vh などのスタイルを強制解除し、コンテンツの高さに合わせる
+      await page.evaluate(() => {
+        try {
+          document.documentElement.style.height = 'auto';
+          document.body.style.height = 'auto';
+          document.body.style.overflow = 'visible';
+        } catch (e) {
+          console.log('Style override failed', e);
+        }
+      });
+
       const screenshotBuffer = await page.screenshot({
         fullPage: true,
         type: 'jpeg',
         quality: 80,
+        captureBeyondViewport: true, // ビューポート外もキャプチャ
       });
       console.log(`✅ スクリーンショット完了: ${screenshotBuffer.length} bytes`);
 
@@ -150,7 +175,8 @@ exports.handler = async (event, context) => {
         }
       } catch (uploadError) {
         console.error('❌ R2アップロードエラー:', uploadError);
-        // エラーでも処理は続行
+        // エラー詳細をログに出す
+        console.error(JSON.stringify(uploadError, null, 2));
       }
     }
 
@@ -164,7 +190,7 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({
         html,
         title,
-        screenshotUrl, // Base64ではなくURLを返す
+        screenshotUrl, 
         timestamp: Date.now()
       })
     };
