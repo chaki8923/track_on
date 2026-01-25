@@ -82,7 +82,7 @@ resource "aws_lambda_layer_version" "chromium_layer" {
 
   # ソースコードが変更されたらレイヤーも更新する
   source_code_hash    = filebase64sha256("${path.module}/chromium.zip")
-  compatible_runtimes = ["nodejs18.x", "nodejs20.x"]
+  compatible_runtimes = ["nodejs18.x", "nodejs20.x", "nodejs22.x"]
   description         = "@sparticuz/chromium layer"
 }
 
@@ -111,7 +111,7 @@ resource "aws_lambda_function" "scraper" {
   role             = aws_iam_role.lambda_scraper_role.arn
   handler          = "handler.handler"
   source_code_hash = data.archive_file.lambda_zip.output_base64sha256
-  runtime          = "nodejs20.x"
+  runtime          = "nodejs22.x"
   timeout          = 120
   memory_size      = 3008
 
