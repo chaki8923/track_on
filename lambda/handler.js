@@ -1,5 +1,16 @@
 const chromium = require('@sparticuz/chromium');
 const puppeteer = require('puppeteer-core');
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+
+// R2クライアント（S3互換）
+const r2Client = new S3Client({
+  region: 'auto',
+  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
+  },
+});
 
 exports.handler = async (event, context) => {
   let browser = null;
@@ -9,6 +20,7 @@ exports.handler = async (event, context) => {
     const body = JSON.parse(event.body || '{}');
     const url = body.url;
     const takeScreenshot = body.takeScreenshot !== false;
+    const siteId = body.siteId; // R2アップロード用
 
     if (!url) {
       return {
@@ -103,17 +115,43 @@ exports.handler = async (event, context) => {
 
     console.log(`✅ HTML取得完了: ${html.length} bytes`);
 
-    // スクリーンショット撮影
-    let screenshotBase64 = null;
-    if (takeScreenshot) {
+    // スクリーンショット撮影とR2アップロード
+    let screenshotUrl = null;
+    if (takeScreenshot && siteId) {
       console.log('📸 スクリーンショット撮影中...');
       const screenshotBuffer = await page.screenshot({
         fullPage: true,
         type: 'jpeg',
         quality: 80,
       });
-      screenshotBase64 = screenshotBuffer.toString('base64');
-      console.log(`✅ スクリーンショット完了: ${screenshotBase64.length} chars`);
+      console.log(`✅ スクリーンショット完了: ${screenshotBuffer.length} bytes`);
+
+      // R2に直接アップロード
+      try {
+        const timestamp = Date.now();
+        const fileName = `${siteId}/${timestamp}.jpg`;
+        const bucketName = process.env.R2_BUCKET_NAME;
+        const publicUrl = process.env.R2_PUBLIC_URL;
+
+        if (!bucketName || !publicUrl) {
+          console.warn('⚠️ R2設定が不完全です。スクリーンショットをスキップします。');
+        } else {
+          const command = new PutObjectCommand({
+            Bucket: bucketName,
+            Key: fileName,
+            Body: screenshotBuffer,
+            ContentType: 'image/jpeg',
+            CacheControl: 'public, max-age=31536000',
+          });
+
+          await r2Client.send(command);
+          screenshotUrl = `${publicUrl}/${fileName}`;
+          console.log(`✅ R2にアップロード完了: ${screenshotUrl}`);
+        }
+      } catch (uploadError) {
+        console.error('❌ R2アップロードエラー:', uploadError);
+        // エラーでも処理は続行
+      }
     }
 
     await browser.close();
@@ -126,7 +164,7 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({
         html,
         title,
-        screenshot: screenshotBase64,
+        screenshotUrl, // Base64ではなくURLを返す
         timestamp: Date.now()
       })
     };

@@ -4,7 +4,8 @@
   "description": "Lambda scraper using Puppeteer and Chromium",
   "main": "handler.js",
   "dependencies": {
-    "@sparticuz/chromium-min": "^131.0.0",
+    "@sparticuz/chromium": "^131.0.0",
+    "@aws-sdk/client-s3": "^3.966.0",
     "puppeteer-core": "^23.11.0"
   }
 }

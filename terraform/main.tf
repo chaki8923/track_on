@@ -120,9 +120,12 @@ resource "aws_lambda_function" "scraper" {
 
   environment {
     variables = {
-      NODE_ENV = "production"
-      # 必要に応じてフォント設定などを追加
-      # AWS_LAMBDA_EXEC_WRAPPER = "/opt/bootstrap"
+      NODE_ENV                = "production"
+      R2_ACCOUNT_ID           = var.r2_account_id
+      R2_ACCESS_KEY_ID        = var.r2_access_key_id
+      R2_SECRET_ACCESS_KEY    = var.r2_secret_access_key
+      R2_BUCKET_NAME          = var.r2_bucket_name
+      R2_PUBLIC_URL           = var.r2_public_url
     }
   }
 }

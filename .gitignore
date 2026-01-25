@@ -45,6 +45,7 @@ terraform/.terraform.lock.hcl
 terraform/*.tfstate
 terraform/*.tfstate.backup
 terraform/*.zip
+terraform/terraform.tfvars
 
 # lambda
 lambda/node_modules/

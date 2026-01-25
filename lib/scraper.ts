@@ -5,7 +5,8 @@ export type ScrapedContent = {
   cleanedHtml: string;
   title: string;
   timestamp: Date;
-  screenshot?: Buffer;
+  screenshot?: Buffer; // 開発環境用
+  screenshotUrl?: string; // Lambda経由の場合（R2に直接アップロード済み）
 };
 
 /**
@@ -14,7 +15,7 @@ export type ScrapedContent = {
  */
 export async function scrapeSite(
   url: string,
-  options: { takeScreenshot?: boolean } = {}
+  options: { takeScreenshot?: boolean; siteId?: string } = {}
 ): Promise<ScrapedContent> {
   const lambdaUrl = process.env.LAMBDA_SCRAPER_URL;
   const isProduction = process.env.VERCEL && lambdaUrl;
@@ -30,10 +31,11 @@ export async function scrapeSite(
 
 /**
  * AWS Lambdaでスクレイピング（本番環境用）
+ * Lambda内でR2に直接アップロードするため、screenshotUrlを返す
  */
 async function scrapeWithLambda(
   url: string,
-  options: { takeScreenshot?: boolean }
+  options: { takeScreenshot?: boolean; siteId?: string }
 ): Promise<ScrapedContent> {
   const lambdaUrl = process.env.LAMBDA_SCRAPER_URL;
   
@@ -52,6 +54,7 @@ async function scrapeWithLambda(
       body: JSON.stringify({
         url,
         takeScreenshot: options.takeScreenshot,
+        siteId: options.siteId, // R2アップロード用
       }),
     });
 
@@ -65,29 +68,10 @@ async function scrapeWithLambda(
     console.log('🔍 Lambda response:', {
       hasHtml: !!data.html,
       htmlLength: data.html?.length,
-      hasScreenshot: !!data.screenshot,
-      screenshotLength: data.screenshot?.length,
-      screenshotType: typeof data.screenshot,
-      isArray: Array.isArray(data.screenshot),
+      hasScreenshotUrl: !!data.screenshotUrl,
+      screenshotUrl: data.screenshotUrl,
       title: data.title
     });
-
-    // Base64スクリーンショットをBufferに変換
-    let screenshot: Buffer | undefined;
-    if (data.screenshot) {
-      // 配列として返ってきた場合（RESPONSE_STREAM時）
-      if (Array.isArray(data.screenshot)) {
-        console.log(`📦 Converting array to Buffer: ${data.screenshot.length} bytes`);
-        screenshot = Buffer.from(data.screenshot);
-      } else {
-        // Base64文字列として返ってきた場合
-        console.log(`📦 Converting Base64 to Buffer: ${data.screenshot.substring(0, 50)}...`);
-        screenshot = Buffer.from(data.screenshot, 'base64');
-      }
-      console.log(`✅ Buffer created: ${screenshot.length} bytes`);
-    } else {
-      console.log(`⚠️ No screenshot in Lambda response`);
-    }
 
     // HTMLをクリーニング
     const cleanedHtml = cleanHtml(data.html);
@@ -97,7 +81,7 @@ async function scrapeWithLambda(
       cleanedHtml,
       title: data.title,
       timestamp: new Date(data.timestamp),
-      screenshot,
+      screenshotUrl: data.screenshotUrl || undefined, // Lambda内でR2にアップロード済み
     };
   } catch (error) {
     console.error('❌ Lambda呼び出しエラー:', error);

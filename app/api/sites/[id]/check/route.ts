@@ -42,25 +42,18 @@ export async function POST(
     // R2が設定されている場合はスクリーンショットを撮影
     const takeScreenshot = isR2Configured();
     
-    // スクレイピング実行
-    const scrapedContent = await scrapeSite(site.url, { takeScreenshot });
+    // スクレイピング実行（Lambda内でR2に直接アップロード）
+    const scrapedContent = await scrapeSite(site.url, { 
+      takeScreenshot,
+      siteId: site.id // Lambda内でR2アップロード用
+    });
 
-    // スクリーンショットをR2にアップロード（スナップショット保存前に実行）
-    let screenshotUrl: string | null = null;
-    if (scrapedContent.screenshot && takeScreenshot) {
-      try {
-        screenshotUrl = await uploadScreenshot(
-          scrapedContent.screenshot,
-          site.id,
-          Date.now()
-        );
-        console.log(`✅ スクリーンショットをR2にアップロード: ${screenshotUrl}`);
-      } catch (uploadError) {
-        console.error('❌ スクリーンショットのアップロードに失敗:', uploadError);
-        // アップロード失敗してもチェックは続行
-      }
-    } else {
-      console.log(`ℹ️ R2設定なし、またはスクショ未取得 (takeScreenshot: ${takeScreenshot}, hasScreenshot: ${!!scrapedContent.screenshot})`);
+    // Lambda内でR2にアップロード済みなので、URLを受け取るだけ
+    const screenshotUrl = scrapedContent.screenshotUrl || null;
+    if (screenshotUrl) {
+      console.log(`✅ LambdaからスクリーンショットURLを受け取り: ${screenshotUrl}`);
+    } else if (takeScreenshot) {
+      console.log(`⚠️ LambdaからスクリーンショットURLが返されませんでした`);
     }
 
     // 前回のスナップショットを取得（スクショURLも含む）
