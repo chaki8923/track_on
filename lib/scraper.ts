@@ -68,14 +68,22 @@ async function scrapeWithLambda(
       hasScreenshot: !!data.screenshot,
       screenshotLength: data.screenshot?.length,
       screenshotType: typeof data.screenshot,
+      isArray: Array.isArray(data.screenshot),
       title: data.title
     });
 
     // Base64スクリーンショットをBufferに変換
     let screenshot: Buffer | undefined;
     if (data.screenshot) {
-      console.log(`📦 Converting screenshot to Buffer: ${data.screenshot.substring(0, 50)}...`);
-      screenshot = Buffer.from(data.screenshot, 'base64');
+      // 配列として返ってきた場合（RESPONSE_STREAM時）
+      if (Array.isArray(data.screenshot)) {
+        console.log(`📦 Converting array to Buffer: ${data.screenshot.length} bytes`);
+        screenshot = Buffer.from(data.screenshot);
+      } else {
+        // Base64文字列として返ってきた場合
+        console.log(`📦 Converting Base64 to Buffer: ${data.screenshot.substring(0, 50)}...`);
+        screenshot = Buffer.from(data.screenshot, 'base64');
+      }
       console.log(`✅ Buffer created: ${screenshot.length} bytes`);
     } else {
       console.log(`⚠️ No screenshot in Lambda response`);
