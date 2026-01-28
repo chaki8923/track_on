@@ -25,7 +25,8 @@ jobs:
           echo "📡 Calling: ${APP_URL}/api/cron/daily-check"
           
           # APIを呼び出し、レスポンスとステータスコードを取得
-          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+          # -L: リダイレクトをフォロー
+          RESPONSE=$(curl -s -L -w "\n%{http_code}" -X POST \
             -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
             -H "Content-Type: application/json" \
             "${APP_URL}/api/cron/daily-check")
