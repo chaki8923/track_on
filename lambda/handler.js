@@ -35,9 +35,7 @@ exports.handler = async (event, context) => {
     browser = await puppeteer.launch({
       args: [
         ...chromium.args,
-        // ★★★ 修正1: ウィンドウ幅を1280px(ノートPCサイズ)にする ★★★
-        // 1920pxだと広すぎて余白ができるため、1280pxにしてコンテンツを充満させる
-        '--window-size=1280,1080',
+        '--window-size=1280,1080', // PCサイト用の幅1280pxを維持
         '--hide-scrollbars',
         '--disable-gpu',
         '--font-render-hinting=none',
@@ -45,11 +43,9 @@ exports.handler = async (event, context) => {
         '--single-process',
       ],
       defaultViewport: {
-        width: 1280, // ここも1280pxに合わせる
+        width: 1280, 
         height: 1080,
-        // ★★★ 修正2: 幅を狭めた分、画質を0.8まで上げる ★★★
-        // 19000px * 0.8 = 15200px (限界の16384px以下なので安全かつ高画質)
-        deviceScaleFactor: 0.8, 
+        deviceScaleFactor: 0.6, // エラー回避のため0.6倍
       },
       executablePath: await chromium.executablePath(),
       headless: chromium.headless,
@@ -93,32 +89,62 @@ exports.handler = async (event, context) => {
 
     let screenshotUrl = null;
     if (takeScreenshot && siteId) {
-      console.log('📸 撮影準備: CSSハック適用...');
+      console.log('📸 撮影準備: レイアウト調整【決定版：中央寄せ】...');
 
       await page.evaluate(() => {
         try {
-          document.documentElement.style.height = 'auto';
-          document.body.style.height = 'auto';
-          document.body.style.overflow = 'visible';
+          // ★★★ 勝利の方程式: Flexbox中央寄せ + 中身フィット ★★★
           
+          // 1. HTML(大枠)をFlexboxにして、子要素(body)を「中央(center)」に配置する
+          // 前回は flex-end(右) でしたが、これを center に変えるだけです
+          document.documentElement.style.cssText = `
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important; /* ここをCenterにする！ */
+            width: 100% !important;
+            background-color: #ffffff !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          `;
+
+          // 2. Bodyを「中身のサイズ」まで縮め、左右マージンを均等にする
+          document.body.style.cssText = `
+            margin: 0 auto !important; /* 左右中央 */
+            width: fit-content !important; /* 中身のサイズにフィットさせる（重要） */
+            min-width: auto !important;
+            max-width: 100% !important;
+            display: block !important;
+            background-color: #ffffff !important;
+            position: relative !important; /* absoluteの子要素を閉じ込める */
+            left: auto !important;
+            right: auto !important;
+            transform: none !important;
+          `;
+
+          // 3. 邪魔な左固定(absolute/fixed)を解除して、親(body)に従わせる
           const allElements = document.querySelectorAll('*');
           for (const el of allElements) {
             const style = window.getComputedStyle(el);
-            if (style.position === 'fixed' || style.position === 'sticky') {
-              el.style.position = 'absolute';
-              const rect = el.getBoundingClientRect();
-              el.style.top = rect.top + window.scrollY + 'px';
-              el.style.left = rect.left + window.scrollX + 'px';
-              el.style.width = rect.width + 'px';
-              el.style.zIndex = '9999';
+
+            // 固定・絶対配置要素は relative に戻してフローに乗せる
+            if (style.position === 'fixed' || style.position === 'sticky' || style.position === 'absolute') {
+                if (el.parentElement === document.body) {
+                   el.style.setProperty('position', 'relative', 'important');
+                   el.style.setProperty('float', 'none', 'important');
+                   // 左右位置の指定を無効化
+                   el.style.setProperty('left', 'auto', 'important');
+                   el.style.setProperty('right', 'auto', 'important');
+                   el.style.setProperty('margin-left', 'auto', 'important');
+                   el.style.setProperty('margin-right', 'auto', 'important');
+                }
             }
+            
+            // 背景固定解除など
             if (style.backgroundAttachment === 'fixed') {
-              el.style.backgroundAttachment = 'scroll';
+              el.style.setProperty('background-attachment', 'scroll', 'important');
             }
-            if (style.animation) el.style.animation = 'none';
-            if (style.transition) el.style.transition = 'none';
           }
-          document.body.style.backgroundAttachment = 'scroll';
+
         } catch (e) {
           console.log('Layout fix failed', e);
         }
@@ -127,7 +153,7 @@ exports.handler = async (event, context) => {
       console.log('⏳ 描画安定化...');
       await new Promise(r => setTimeout(r, 1000));
 
-      console.log('📸 シャッターを切ります (Width 1280 / Scale 0.8)');
+      console.log('📸 シャッターを切ります (Width 1280 / Scale 0.6)');
       
       const tempFilePath = `/tmp/screenshot-${Date.now()}.jpg`;
       
@@ -135,7 +161,7 @@ exports.handler = async (event, context) => {
         path: tempFilePath,
         fullPage: true, 
         type: 'jpeg',
-        quality: 85, // 画質さらにアップ
+        quality: 85,
       });
 
       const fileBuffer = fs.readFileSync(tempFilePath);
