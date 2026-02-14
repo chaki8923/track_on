@@ -28,7 +28,7 @@ export default function LegalPage() {
               <h3 className="text-lg font-semibold text-gray-900 mb-2">販売事業者</h3>
               <p className="text-gray-700">
                 {/* TODO: 運営者名（会社名または個人名）を記入 */}
-                <span className="bg-yellow-100 px-2 py-1">[運営者名（会社名または個人名）を記入してください]</span>
+                <span className="bg-yellow-100 px-2 py-1">茶木 涼</span>
               </p>
             </div>
 
@@ -36,7 +36,7 @@ export default function LegalPage() {
               <h3 className="text-lg font-semibold text-gray-900 mb-2">運営責任者</h3>
               <p className="text-gray-700">
                 {/* TODO: 代表者名を記入 */}
-                <span className="bg-yellow-100 px-2 py-1">[代表者名を記入してください]</span>
+                <span className="bg-yellow-100 px-2 py-1">茶木 涼</span>
               </p>
             </div>
 
@@ -44,21 +44,21 @@ export default function LegalPage() {
               <h3 className="text-lg font-semibold text-gray-900 mb-2">所在地</h3>
               <p className="text-gray-700">
                 {/* TODO: 事業所の住所を記入 */}
-                <span className="bg-yellow-100 px-2 py-1">[郵便番号]</span>
+                <span className="bg-yellow-100 px-2 py-1">350-1333</span>
                 <br />
-                <span className="bg-yellow-100 px-2 py-1">[都道府県市区町村以下の住所]</span>
+                <span className="bg-yellow-100 px-2 py-1">埼玉県狭山市上奥富83-1</span>
               </p>
               <p className="text-sm text-gray-500 mt-2">
-                ※個人事業主で自宅住所を非公開にしたい場合は、請求があった場合に遅滞なく開示する旨を記載することも可能です
+                請求があった場合に遅滞なく開示します
               </p>
             </div>
 
             <div className="border-b pb-4">
               <h3 className="text-lg font-semibold text-gray-900 mb-2">お問い合わせ</h3>
               <p className="text-gray-700">
-                メールアドレス：<span className="bg-yellow-100 px-2 py-1">[お問い合わせ用メールアドレス]</span>
+                メールアドレス：<span className="bg-yellow-100 px-2 py-1">yuki.chaki@gmail.com</span>
                 <br />
-                電話番号：<span className="bg-yellow-100 px-2 py-1">[電話番号]</span>
+                電話番号：<span className="bg-yellow-100 px-2 py-1">050-1809-1062</span>
               </p>
               <p className="text-sm text-gray-500 mt-2">
                 ※営業時間：平日 10:00〜18:00（土日祝日を除く）

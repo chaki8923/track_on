@@ -197,7 +197,7 @@ export default function PrivacyPage() {
                 <p className="font-semibold">Track On 運営事務局</p>
                 <p className="mt-2">
                   {/* TODO: 実際のメールアドレスを記入 */}
-                  メール：<span className="text-primary-600">[お問い合わせメールアドレスを記入してください]</span>
+                  <span className="text-primary-600"><a href="https://forms.gle/BWwo3Mz9nMNFQoB48" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">お問い合わせフォーム</a></span>
                 </p>
               </div>
             </div>
@@ -207,7 +207,7 @@ export default function PrivacyPage() {
             <p className="text-sm text-gray-600">制定日：2026年1月18日</p>
             <p className="text-sm text-gray-600 mt-2">
               {/* TODO: 運営者情報を記載 */}
-              運営者：[運営者名を記入してください]
+              運営者：茶木 涼
             </p>
           </div>
         </div>

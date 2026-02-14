@@ -32,7 +32,7 @@ export default function CheckingModal({ isOpen, siteName, progress }: Props) {
     <div className="fixed inset-0 bg-black bg-opacity-80 backdrop-blur-sm flex items-center justify-center z-50">
       <div className="text-center max-w-md px-8">
         {/* アニメーションアイコン（動画） */}
-        <div className="relative w-32 h-32 mx-auto mb-8 overflow-hidden rounded-full">
+        <div className="relative w-48 h-48 mx-auto mb-8 overflow-hidden rounded-full">
           <video
             src={videoSrc}
             key={videoSrc}

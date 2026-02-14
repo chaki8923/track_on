@@ -153,7 +153,7 @@ export default function TermsPage() {
             <p className="text-sm text-gray-600">制定日：2026年1月18日</p>
             <p className="text-sm text-gray-600 mt-2">
               {/* TODO: 運営者情報を記載 */}
-              運営者：[運営者名を記入してください]
+              運営者：茶木 涼
             </p>
           </div>
         </div>
