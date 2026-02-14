@@ -15,12 +15,9 @@ export default function LegalPage() {
       {/* コンテンツ */}
       <div className="container mx-auto px-4 py-12 max-w-4xl">
         <h1 className="text-4xl font-bold text-gray-900 mb-8">特定商取引法に基づく表記</h1>
-        
+
         <div className="bg-white rounded-lg shadow-sm p-8 space-y-6">
           <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
-            <p className="text-sm text-yellow-800">
-              <strong>⚠️ 重要：</strong> 以下の情報は必ず正確に記入してください。法律で定められた必須項目です。
-            </p>
           </div>
 
           <div className="space-y-6">
@@ -56,7 +53,7 @@ export default function LegalPage() {
             <div className="border-b pb-4">
               <h3 className="text-lg font-semibold text-gray-900 mb-2">お問い合わせ</h3>
               <p className="text-gray-700">
-                メールアドレス：<span className="bg-yellow-100 px-2 py-1">yuki.chaki@gmail.com</span>
+                メールアドレス：<span className="bg-yellow-100 px-2 py-1"><a href="https://forms.gle/6HJHWBrcjTPm2KrL7" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">お問い合わせフォーム</a></span>
                 <br />
                 電話番号：<span className="bg-yellow-100 px-2 py-1">050-1809-1062</span>
               </p>
